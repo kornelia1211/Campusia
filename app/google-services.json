@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "812817878576",
+    "project_id": "campusia-fc664",
+    "storage_bucket": "campusia-fc664.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:812817878576:android:5ed21a922387aed39ba7f5",
+        "android_client_info": {
+          "package_name": "com.example.campusia"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRJYh0N9-f9AAF1fSww8jMKDtG9XeJ68o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
