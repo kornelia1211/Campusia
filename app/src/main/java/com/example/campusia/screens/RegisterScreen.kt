@@ -1,5 +1,7 @@
 package com.example.campusia.screens
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,8 +12,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -24,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,6 +42,9 @@ import androidx.navigation.NavHostController
 import com.example.campusia.ui.theme.PurpleDark
 import com.example.campusia.ui.theme.PurpleLight
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun RegisterScreen (
@@ -44,6 +53,10 @@ fun RegisterScreen (
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordConfirmation by remember {mutableStateOf("")}
+    val context = LocalContext.current
+    var isPasswordVisible by remember { mutableStateOf(false) }
+    var isPasswordConformationVisible by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -53,7 +66,7 @@ fun RegisterScreen (
         OutlinedTextField(
             value = email,
             onValueChange = {
-                email = it
+                    newValue -> email = newValue.filter {  it != '\n' && it != ' ' }
             },
             label = {
                 Text(text = "Email address")
@@ -64,20 +77,65 @@ fun RegisterScreen (
 
         Spacer(modifier = Modifier.height(8.dp))
 
+
         OutlinedTextField(
             value = password,
-            onValueChange = {
-                password = it
+            onValueChange = { newValue ->
+                password = newValue.filter { it != '\n' && it != ' ' }
             },
             label = {
                 Text(text = "Password")
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (isPasswordVisible)
+                VisualTransformation.None
+            else
+                PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password
-            )
+            ),
+            trailingIcon = {
+                IconButton(
+                    onClick = { isPasswordVisible = !isPasswordVisible }
+                ) {
+                    Icon(
+                        imageVector = if (isPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = if (isPasswordVisible) "Show password" else "Hide password"
+                    )
+                }
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = passwordConfirmation,
+            onValueChange = { newValue ->
+                passwordConfirmation = newValue.filter { it != '\n' && it != ' ' }
+            },
+            label = {
+                Text(text = "Confirm your password")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            visualTransformation = if (isPasswordConformationVisible)
+                VisualTransformation.None
+            else
+                PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password
+            ),
+            trailingIcon = {
+                IconButton(
+                    onClick = { isPasswordConformationVisible = !isPasswordConformationVisible }
+                ) {
+                    Icon(
+                        imageVector = if (isPasswordConformationVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = if (isPasswordConformationVisible) "Show password" else "Hide password"
+                    )
+                }
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -88,7 +146,9 @@ fun RegisterScreen (
                     auth = auth,
                     email = email,
                     password = password,
-                    navController = navController
+                    passwordConfirmation = passwordConfirmation,
+                    navController = navController,
+                    context = context
                 )
             },
             modifier = Modifier
@@ -132,14 +192,68 @@ fun register(
     auth: FirebaseAuth,
     email: String,
     password: String,
-    navController: NavController
+    passwordConfirmation: String,
+    navController: NavController,
+    context: Context
 ) {
-    if (email.isEmpty() || password.isEmpty()) return
+    val cleanEmail = email.trim()
+    val cleanPassword = password.trim()
+    val cleanPasswordConfirmation = passwordConfirmation.trim()
 
-    auth.createUserWithEmailAndPassword(email, password)
+    when {
+        !cleanEmail.contains("@") -> {
+            Toast.makeText(context, "Email has to contain '@'!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        cleanPassword.length < 6 -> {
+            Toast.makeText(
+                context, "Password must contain at least 6 signs!",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        !cleanPassword.any { it.isLetter() } -> {
+            Toast.makeText(
+                context,
+                "Password must contain at least one letter!",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        !cleanPassword.any { it.isDigit() } -> {
+            Toast.makeText(
+                context,
+                "Password must contain at least one number!",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        cleanPassword != cleanPasswordConfirmation -> {
+            Toast.makeText(context, "Provided passwords are different!", Toast.LENGTH_SHORT).show()
+            return
+        }
+    }
+
+    auth.createUserWithEmailAndPassword(cleanEmail, cleanPassword)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
+                Toast.makeText(
+                    context,
+                    "Successfully registered!",
+                    Toast.LENGTH_SHORT
+                ).show()
                 navController.navigate("home_screen")
+            }
+            else {
+                Toast.makeText(
+                    context,
+                    task.exception?.message ?: "Registration failed",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
 }

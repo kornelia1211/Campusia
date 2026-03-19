@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.material.icons.extended)
 
     // ✅ Firebase
     implementation(platform(libs.firebase.bom))
