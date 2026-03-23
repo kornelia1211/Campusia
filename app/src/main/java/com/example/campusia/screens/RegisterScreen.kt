@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -45,6 +47,8 @@ import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.input.VisualTransformation
+import com.example.campusia.entities.User
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun RegisterScreen (
@@ -54,15 +58,46 @@ fun RegisterScreen (
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordConfirmation by remember {mutableStateOf("")}
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var department by remember { mutableStateOf("") }
+    var role by remember { mutableStateOf("Student") }
     val context = LocalContext.current
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isPasswordConformationVisible by remember { mutableStateOf(false) }
 
+    val roles = listOf("Student", "Lecturer")
+    val departments = listOf("Engineering & Technology", "Business & Social Sciences", "Natural Sciences & Health", "Computer & IT")
+
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize().padding(32.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        OutlinedTextField(
+            value = firstName,
+            onValueChange = {
+                    newValue -> firstName = newValue.filter {  it != '\n' }
+            },
+            label = {
+                Text(text = "First name")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        )
+
+        OutlinedTextField(
+            value = lastName,
+            onValueChange = {
+                    newValue -> lastName = newValue.filter {  it != '\n' && it != ' ' }
+            },
+            label = {
+                Text(text = "Last name")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        )
+
         OutlinedTextField(
             value = email,
             onValueChange = {
@@ -74,9 +109,6 @@ fun RegisterScreen (
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp)
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
 
         OutlinedTextField(
             value = password,
@@ -107,8 +139,6 @@ fun RegisterScreen (
             }
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         OutlinedTextField(
             value = passwordConfirmation,
             onValueChange = { newValue ->
@@ -138,7 +168,11 @@ fun RegisterScreen (
             }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+//        TODO("Role dropdown")
+//
+//        TODO("Department dropdown")
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
@@ -147,6 +181,10 @@ fun RegisterScreen (
                     email = email,
                     password = password,
                     passwordConfirmation = passwordConfirmation,
+                    firstName = firstName,
+                    lastName = lastName,
+                    role = role,
+                    department = department,
                     navController = navController,
                     context = context
                 )
@@ -169,7 +207,7 @@ fun RegisterScreen (
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedButton(
             onClick = {navController.navigate("login_screen")},
@@ -193,6 +231,10 @@ fun register(
     email: String,
     password: String,
     passwordConfirmation: String,
+    role: String,
+    firstName: String,
+    lastName: String,
+    department: String,
     navController: NavController,
     context: Context
 ) {
@@ -241,12 +283,39 @@ fun register(
     auth.createUserWithEmailAndPassword(cleanEmail, cleanPassword)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Toast.makeText(
-                    context,
-                    "Successfully registered!",
-                    Toast.LENGTH_SHORT
-                ).show()
-                navController.navigate("home_screen")
+                val userId = auth.currentUser?.uid
+                val db = FirebaseFirestore.getInstance()
+
+                val user = User(
+                    userId = userId ?: "",
+                    email = email,
+                    firstName = firstName,
+                    lastName = lastName,
+                    role = role,
+                    department = department
+                )
+
+                if (userId != null){
+                    db.collection("users")
+                        .document(userId)
+                        .set(user)
+                        .addOnSuccessListener {
+                            Toast.makeText(
+                                context,
+                                "Successfully registered!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            navController.navigate("home_screen")
+                        }
+                        .addOnFailureListener { e ->
+                            Toast.makeText(
+                                context,
+                                "Error occurred: ${e.message}",
+                                Toast.LENGTH_LONG)
+                                .show()
+                        }
+                }
+
             }
             else {
                 Toast.makeText(
