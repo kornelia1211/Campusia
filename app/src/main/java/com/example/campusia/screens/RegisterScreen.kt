@@ -3,25 +3,45 @@ package com.example.campusia.screens
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,35 +49,51 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import com.example.campusia.ui.theme.PurpleDark
-import com.example.campusia.ui.theme.PurpleLight
-import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.ui.text.input.VisualTransformation
+import com.example.campusia.components.StudentHatIcon
 import com.example.campusia.entities.User
+import com.example.campusia.ui.theme.CampusiaTheme
+import com.example.campusia.ui.theme.CardBackground
+import com.example.campusia.ui.theme.FieldBorder
+import com.example.campusia.ui.theme.PlaceholderColor
+import com.example.campusia.ui.theme.PrimaryPurple
+import com.example.campusia.ui.theme.TextDark
+import com.example.campusia.ui.theme.TextMuted
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
+private val RegisterPageGradient = Brush.linearGradient(
+    colors = listOf(
+        Color(0xFFE9DDFD),
+        Color(0xFFF7F5FB),
+        Color(0xFFE9DDFD)
+    )
+)
+
 @Composable
-fun RegisterScreen (
+fun RegisterScreen(
     navController: NavHostController,
     auth: FirebaseAuth
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var passwordConfirmation by remember {mutableStateOf("")}
+    var passwordConfirmation by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var department by remember { mutableStateOf("") }
@@ -67,63 +103,89 @@ fun RegisterScreen (
     var isPasswordConformationVisible by remember { mutableStateOf(false) }
 
     val roles = listOf("Student", "Lecturer")
-    val departments = listOf("Engineering & Technology", "Business & Social Sciences", "Natural Sciences & Health", "Computer & IT")
+    val departments = listOf(
+        "Engineering & Technology",
+        "Business & Social Sciences",
+        "Natural Sciences & Health",
+        "Computer & IT"
+    )
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        OutlinedTextField(
+    RegisterCardContainer {
+        StudentHatIcon()
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Text(
+            text = "Create Account",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextDark,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Join Campusia",
+            fontSize = 15.sp,
+            color = TextMuted,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        RegisterFormLabel("First name")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
             value = firstName,
-            onValueChange = {
-                    newValue -> firstName = newValue.filter {  it != '\n' }
+            onValueChange = { newValue ->
+                firstName = newValue.filter { it != '\n' }
             },
-            label = {
-                Text(text = "First name")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
+            placeholder = "John"
         )
 
-        OutlinedTextField(
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Last name")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
             value = lastName,
-            onValueChange = {
-                    newValue -> lastName = newValue.filter {  it != '\n' && it != ' ' }
+            onValueChange = { newValue ->
+                lastName = newValue.filter { it != '\n' && it != ' ' }
             },
-            label = {
-                Text(text = "Last name")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
+            placeholder = "Smith"
         )
 
-        OutlinedTextField(
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Email address")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
             value = email,
-            onValueChange = {
-                    newValue -> email = newValue.filter {  it != '\n' && it != ' ' }
+            onValueChange = { newValue ->
+                email = newValue.filter { it != '\n' && it != ' ' }
             },
-            label = {
-                Text(text = "Email address")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
+            placeholder = "student@university.edu",
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email
+            )
         )
 
-        OutlinedTextField(
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Password")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
             value = password,
             onValueChange = { newValue ->
                 password = newValue.filter { it != '\n' && it != ' ' }
             },
-            label = {
-                Text(text = "Password")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            visualTransformation = if (isPasswordVisible)
-                VisualTransformation.None
-            else
-                PasswordVisualTransformation(),
+            placeholder = "••••••••",
+            isPassword = !isPasswordVisible,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password
             ),
@@ -132,27 +194,34 @@ fun RegisterScreen (
                     onClick = { isPasswordVisible = !isPasswordVisible }
                 ) {
                     Icon(
-                        imageVector = if (isPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                        contentDescription = if (isPasswordVisible) "Show password" else "Hide password"
+                        imageVector = if (isPasswordVisible) {
+                            Icons.Filled.Visibility
+                        } else {
+                            Icons.Filled.VisibilityOff
+                        },
+                        contentDescription = if (isPasswordVisible) {
+                            "Show password"
+                        } else {
+                            "Hide password"
+                        },
+                        tint = TextMuted
                     )
                 }
             }
         )
 
-        OutlinedTextField(
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Confirm your password")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
             value = passwordConfirmation,
             onValueChange = { newValue ->
                 passwordConfirmation = newValue.filter { it != '\n' && it != ' ' }
             },
-            label = {
-                Text(text = "Confirm your password")
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            visualTransformation = if (isPasswordConformationVisible)
-                VisualTransformation.None
-            else
-                PasswordVisualTransformation(),
+            placeholder = "••••••••",
+            isPassword = !isPasswordConformationVisible,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password
             ),
@@ -161,18 +230,47 @@ fun RegisterScreen (
                     onClick = { isPasswordConformationVisible = !isPasswordConformationVisible }
                 ) {
                     Icon(
-                        imageVector = if (isPasswordConformationVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                        contentDescription = if (isPasswordConformationVisible) "Show password" else "Hide password"
+                        imageVector = if (isPasswordConformationVisible) {
+                            Icons.Filled.Visibility
+                        } else {
+                            Icons.Filled.VisibilityOff
+                        },
+                        contentDescription = if (isPasswordConformationVisible) {
+                            "Show password"
+                        } else {
+                            "Hide password"
+                        },
+                        tint = TextMuted
                     )
                 }
             }
         )
 
-//        TODO("Role dropdown")
-//
-//        TODO("Department dropdown")
+        Spacer(modifier = Modifier.height(16.dp))
 
+        RegisterFormLabel("Role")
         Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterDropdownField(
+            selectedValue = role,
+            items = roles,
+            placeholder = "Choose role",
+            onItemSelected = { role = it }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Department")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterDropdownField(
+            selectedValue = department,
+            items = departments,
+            placeholder = "Choose department",
+            onItemSelected = { department = it }
+        )
+
+        Spacer(modifier = Modifier.height(22.dp))
 
         Button(
             onClick = {
@@ -191,38 +289,426 @@ fun RegisterScreen (
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(PurpleDark, PurpleLight)
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+                .height(52.dp)
+                .clip(RoundedCornerShape(14.dp)),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
         ) {
             Text(
                 text = "Register",
-                fontSize = 22.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedButton(
-            onClick = {navController.navigate("login_screen")},
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Text(
-                text = "Sign In",
+                color = Color.White,
                 style = TextStyle(
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 22.sp,
+                    fontSize = 17.sp,
                     textAlign = TextAlign.Center
                 )
             )
         }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        TextButton(
+            onClick = { navController.navigate("login_screen") }
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Already have an account? ",
+                    color = TextMuted,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = "Sign In",
+                    color = PrimaryPurple,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RegisterScreenContent() {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordConfirmation by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var department by remember { mutableStateOf("") }
+    var role by remember { mutableStateOf("Student") }
+    var isPasswordVisible by remember { mutableStateOf(false) }
+    var isPasswordConformationVisible by remember { mutableStateOf(false) }
+
+    val roles = listOf("Student", "Lecturer")
+    val departments = listOf(
+        "Engineering & Technology",
+        "Business & Social Sciences",
+        "Natural Sciences & Health",
+        "Computer & IT"
+    )
+
+    RegisterCardContainer {
+        RegisterTopIcon(
+            icon = Icons.Outlined.School,
+            backgroundColor = PrimaryPurple
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Text(
+            text = "Create Account",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextDark,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Join Campusia",
+            fontSize = 15.sp,
+            color = TextMuted,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        RegisterFormLabel("First name")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
+            value = firstName,
+            onValueChange = { newValue ->
+                firstName = newValue.filter { it != '\n' }
+            },
+            placeholder = "John"
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Last name")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
+            value = lastName,
+            onValueChange = { newValue ->
+                lastName = newValue.filter { it != '\n' && it != ' ' }
+            },
+            placeholder = "Smith"
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Email address")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
+            value = email,
+            onValueChange = { newValue ->
+                email = newValue.filter { it != '\n' && it != ' ' }
+            },
+            placeholder = "student@university.edu",
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Password")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
+            value = password,
+            onValueChange = { newValue ->
+                password = newValue.filter { it != '\n' && it != ' ' }
+            },
+            placeholder = "••••••••",
+            isPassword = !isPasswordVisible,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password
+            ),
+            trailingIcon = {
+                IconButton(
+                    onClick = { isPasswordVisible = !isPasswordVisible }
+                ) {
+                    Icon(
+                        imageVector = if (isPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = if (isPasswordVisible) "Show password" else "Hide password",
+                        tint = TextMuted
+                    )
+                }
+            }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Confirm your password")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterTextField(
+            value = passwordConfirmation,
+            onValueChange = { newValue ->
+                passwordConfirmation = newValue.filter { it != '\n' && it != ' ' }
+            },
+            placeholder = "••••••••",
+            isPassword = !isPasswordConformationVisible,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password
+            ),
+            trailingIcon = {
+                IconButton(
+                    onClick = { isPasswordConformationVisible = !isPasswordConformationVisible }
+                ) {
+                    Icon(
+                        imageVector = if (isPasswordConformationVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = if (isPasswordConformationVisible) "Show password" else "Hide password",
+                        tint = TextMuted
+                    )
+                }
+            }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Role")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterDropdownField(
+            selectedValue = role,
+            items = roles,
+            placeholder = "Choose role",
+            onItemSelected = { role = it }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RegisterFormLabel("Department")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RegisterDropdownField(
+            selectedValue = department,
+            items = departments,
+            placeholder = "Choose department",
+            onItemSelected = { department = it }
+        )
+
+        Spacer(modifier = Modifier.height(22.dp))
+
+        Button(
+            onClick = { },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(14.dp)),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
+        ) {
+            Text(
+                text = "Register",
+                color = Color.White,
+                style = TextStyle(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 17.sp,
+                    textAlign = TextAlign.Center
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        TextButton(onClick = { }) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Already have an account? ",
+                    color = TextMuted,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = "Sign In",
+                    color = PrimaryPurple,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RegisterCardContainer(
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(RegisterPageGradient)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 18.dp, vertical = 20.dp),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 88.dp)
+                .verticalScroll(rememberScrollState()),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = CardBackground),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 28.dp, vertical = 30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                content = content
+            )
+        }
+    }
+}
+
+@Composable
+private fun RegisterFormLabel(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.fillMaxWidth(),
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Medium,
+        color = Color(0xFF2F2F2F)
+    )
+}
+
+@Composable
+private fun RegisterTopIcon(
+    icon: ImageVector,
+    backgroundColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(backgroundColor)
+            .padding(14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.White
+        )
+    }
+}
+
+@Composable
+private fun RegisterTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    isPassword: Boolean = false,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    trailingIcon: @Composable (() -> Unit)? = null
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        placeholder = {
+            Text(
+                text = placeholder,
+                color = PlaceholderColor
+            )
+        },
+        visualTransformation = if (isPassword) {
+            PasswordVisualTransformation()
+        } else {
+            VisualTransformation.None
+        },
+        keyboardOptions = keyboardOptions,
+        trailingIcon = trailingIcon,
+        shape = RoundedCornerShape(14.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = PrimaryPurple,
+            unfocusedBorderColor = FieldBorder,
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            cursorColor = PrimaryPurple
+        )
+    )
+}
+
+@Composable
+private fun RegisterDropdownField(
+    selectedValue: String,
+    items: List<String>,
+    placeholder: String,
+    onItemSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color.White)
+                .border(
+                    width = 1.dp,
+                    color = FieldBorder,
+                    shape = RoundedCornerShape(14.dp)
+                )
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        expanded = true
+                    }
+                }
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (selectedValue.isBlank()) placeholder else selectedValue,
+                color = if (selectedValue.isBlank()) PlaceholderColor else Color(0xFF2F2F2F),
+                fontSize = 16.sp
+            )
+
+            Icon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = "Choose option",
+                tint = TextMuted
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            items.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item) },
+                    onClick = {
+                        onItemSelected(item)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RegisterScreenPreview() {
+    CampusiaTheme {
+        RegisterScreenContent()
     }
 }
 
@@ -250,7 +736,8 @@ fun register(
 
         cleanPassword.length < 6 -> {
             Toast.makeText(
-                context, "Password must contain at least 6 signs!",
+                context,
+                "Password must contain at least 6 signs!",
                 Toast.LENGTH_SHORT
             ).show()
             return
@@ -295,7 +782,7 @@ fun register(
                     department = department
                 )
 
-                if (userId != null){
+                if (userId != null) {
                     db.collection("users")
                         .document(userId)
                         .set(user)
@@ -311,13 +798,11 @@ fun register(
                             Toast.makeText(
                                 context,
                                 "Error occurred: ${e.message}",
-                                Toast.LENGTH_LONG)
-                                .show()
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                 }
-
-            }
-            else {
+            } else {
                 Toast.makeText(
                     context,
                     task.exception?.message ?: "Registration failed",
