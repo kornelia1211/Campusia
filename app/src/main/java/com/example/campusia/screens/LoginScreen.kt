@@ -63,6 +63,7 @@ import com.example.campusia.ui.theme.TextDark
 import com.example.campusia.ui.theme.TextMuted
 import com.google.firebase.auth.FirebaseAuth
 import com.example.campusia.components.StudentHatIcon
+import com.google.firebase.firestore.FirebaseFirestore
 
 private val AuthPageGradient = Brush.linearGradient(
     colors = listOf(
@@ -458,7 +459,25 @@ fun signIn(
     auth.signInWithEmailAndPassword(email, password)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                navController.navigate("home_screen")
+                val userId = auth.currentUser?.uid
+                val db = FirebaseFirestore.getInstance()
+
+                if (userId != null) {
+                    db.collection("users")
+                        .document(userId)
+                        .get()
+                        .addOnSuccessListener { document ->
+                            val role = document.getString("role") ?: "Student"
+
+                            if (role == "Lecturer") {
+                                navController.navigate("lecturer_home")
+                            } else if(role == "Student") {
+                                navController.navigate("student_home")
+                            } else {
+                                navController.navigate("admin_home")
+                            }
+                        }
+                }
             }
         }
 }
