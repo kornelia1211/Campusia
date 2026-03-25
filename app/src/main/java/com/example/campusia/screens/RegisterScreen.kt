@@ -775,14 +775,14 @@ fun register(
 
                 val user = User(
                     userId = userId ?: "",
-                    email = email,
+                    email = cleanEmail,
                     firstName = firstName,
                     lastName = lastName,
                     role = role,
                     department = department
                 )
 
-                if (userId != null) {
+                if (!userId.isNullOrBlank()) {
                     db.collection("users")
                         .document(userId)
                         .set(user)
