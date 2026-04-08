@@ -66,7 +66,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import com.example.campusia.components.PasswordRequirementText
 import com.example.campusia.components.StudentHatIcon
+import com.example.campusia.entities.PasswordRequirement
 import com.example.campusia.entities.User
 import com.example.campusia.ui.theme.CampusiaTheme
 import com.example.campusia.ui.theme.CardBackground
@@ -177,6 +179,22 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         RegisterFormLabel("Password")
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Column(
+            modifier = Modifier.padding(4.dp)
+                .fillMaxWidth()){
+            val requirements = listOf(
+                PasswordRequirement("At least 6 characters", password.length >= 6),
+                PasswordRequirement("At least one letter", password.any { it.isLetter() }),
+                PasswordRequirement("At least one number", password.any { it.isDigit() })
+            )
+
+            requirements.forEach { requirement ->
+                PasswordRequirementText(label = requirement.label, isProvided = requirement.isProvided)
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
         RegisterTextField(
@@ -420,6 +438,21 @@ fun RegisterScreenContent() {
         Spacer(modifier = Modifier.height(16.dp))
 
         RegisterFormLabel("Password")
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Column(modifier = Modifier.padding(4.dp)
+            .fillMaxWidth()){
+            val requirements = listOf(
+                    PasswordRequirement("At least 6 characters", password.length >= 6),
+                    PasswordRequirement("At least one letter", password.any { it.isLetter() }),
+                    PasswordRequirement("At least one number", password.any { it.isDigit() })
+                )
+
+            requirements.forEach { requirement ->
+                PasswordRequirementText(label = requirement.label, isProvided = requirement.isProvided)
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
         RegisterTextField(
@@ -816,4 +849,4 @@ fun register(
                 ).show()
             }
         }
-}
+    }
