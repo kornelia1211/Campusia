@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import com.example.campusia.SessionManager
 import com.example.campusia.ui.theme.CampusiaTheme
 import com.example.campusia.ui.theme.CardBackground
 import com.example.campusia.ui.theme.FieldBorder
@@ -63,6 +64,7 @@ import com.example.campusia.ui.theme.TextDark
 import com.example.campusia.ui.theme.TextMuted
 import com.google.firebase.auth.FirebaseAuth
 import com.example.campusia.components.StudentHatIcon
+import com.example.campusia.entities.mapRole
 import com.google.firebase.firestore.FirebaseFirestore
 
 private val AuthPageGradient = Brush.linearGradient(
@@ -467,15 +469,12 @@ fun signIn(
                         .document(userId)
                         .get()
                         .addOnSuccessListener { document ->
-                            val role = document.getString("role") ?: "Student"
+                            val roleString = document.getString("role") ?: "Student"
+                            val role = mapRole(roleString)
 
-                            if (role == "Lecturer") {
-                                navController.navigate("lecturer_home")
-                            } else if(role == "Student") {
-                                navController.navigate("student_home")
-                            } else {
-                                navController.navigate("admin_home")
-                            }
+                            //save role globally
+                            SessionManager.userRole = role
+                            navController.navigate("courses_screen")
                         }
                 }
             }

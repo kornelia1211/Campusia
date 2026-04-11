@@ -825,13 +825,8 @@ fun register(
                                 "Successfully registered!",
                                 Toast.LENGTH_SHORT
                             ).show()
-                            if (role == "Lecturer") {
-                                navController.navigate("lecturer_home")
-                            } else if (role == "Student"){
-                                navController.navigate("student_home")
-                            }else{
-                                navController.navigate("admin_home")
-                            }
+                            navController.navigate("courses_screen")
+
                         }
                         .addOnFailureListener { e ->
                             Toast.makeText(
