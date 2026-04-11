@@ -66,10 +66,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import com.example.campusia.SessionManager
 import com.example.campusia.components.PasswordRequirementText
 import com.example.campusia.components.StudentHatIcon
 import com.example.campusia.entities.PasswordRequirement
 import com.example.campusia.entities.User
+import com.example.campusia.entities.mapRole
 import com.example.campusia.ui.theme.CampusiaTheme
 import com.example.campusia.ui.theme.CardBackground
 import com.example.campusia.ui.theme.FieldBorder
@@ -820,13 +822,15 @@ fun register(
                         .document(userId)
                         .set(user)
                         .addOnSuccessListener {
+                            SessionManager.userRole = mapRole(role) //update the role in session manager
                             Toast.makeText(
                                 context,
                                 "Successfully registered!",
                                 Toast.LENGTH_SHORT
                             ).show()
-                            navController.navigate("courses_screen")
-
+                            navController.navigate("courses_screen"){
+                                popUpTo("register_screen") {inclusive = true} //so logged in user cannot go back to registration screen
+                            }
                         }
                         .addOnFailureListener { e ->
                             Toast.makeText(
