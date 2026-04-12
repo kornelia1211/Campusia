@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.campusia.screens.CourseCreationScreen
 import com.example.campusia.screens.HomeScreen
 import com.example.campusia.screens.LoginScreen
 import com.example.campusia.screens.MyCoursesScreen
@@ -29,6 +30,9 @@ fun Navigation(auth: FirebaseAuth) {
         }
         composable("courses_screen"){
             MyCoursesScreen(navController)
+        }
+        composable("course_creation") {
+            CourseCreationScreen(navController)
         }
 
     }

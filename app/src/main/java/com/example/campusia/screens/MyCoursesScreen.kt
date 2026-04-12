@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.campusia.SessionManager
 import com.example.campusia.components.CourseCard
+import com.example.campusia.components.RoundedButton
 import com.example.campusia.entities.Course
 import com.example.campusia.entities.CourseSchedule
 import com.example.campusia.entities.UserRole
@@ -54,6 +55,11 @@ fun MyCoursesScreen(navController: NavHostController) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
+
+        RoundedButton(
+            text = "➕  New Course",
+            onClick = { navController.navigate("course_creation") }
+        )
 
         Text(
             text = "My Courses",
@@ -90,47 +96,4 @@ fun MyCoursesScreen(navController: NavHostController) {
     }
 }
 
-fun createCourse(
-    title: String,
-    description: String,
-    department: String,
-    schedule: CourseSchedule,
-    maxStudents: Int,
-    providedLecturerIds: List<String> = emptyList(), // if admin creates the course or lecturer wants to add a co-lecturer
-    context: Context,
-    onSuccess: () -> Unit
-){
-    val db = FirebaseFirestore.getInstance()
-    val auth = FirebaseAuth.getInstance()
-    val currentUserId = auth.currentUser?.uid ?: return
-    val currentUserRole = SessionManager.userRole
-
-    val finalLecturerIds = if (currentUserRole == UserRole.LECTURER) {
-        (providedLecturerIds + currentUserId).distinct()
-    } else {
-        providedLecturerIds.distinct()
-    }
-
-    if (finalLecturerIds.isEmpty()) {
-        Toast.makeText(context, "Please select at least one lecturer", Toast.LENGTH_SHORT).show()
-        return
-    }
-
-    val courseRef = db.collection("courses").document()
-
-    val newCourse = Course(
-        courseId = courseRef.id,
-        title = title,
-        description = description,
-        department = department,
-        maxStudents = maxStudents,
-        lecturerIds = finalLecturerIds,
-        schedule = schedule
-    )
-
-    courseRef.set(newCourse).addOnSuccessListener {
-        Toast.makeText(context, "Course was successfully created!", Toast.LENGTH_SHORT).show()
-        onSuccess()
-    }
-}
 
