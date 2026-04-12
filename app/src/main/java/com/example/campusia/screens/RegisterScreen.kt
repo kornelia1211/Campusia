@@ -69,6 +69,7 @@ import androidx.navigation.NavHostController
 import com.example.campusia.SessionManager
 import com.example.campusia.components.PasswordRequirementText
 import com.example.campusia.components.StudentHatIcon
+import com.example.campusia.entities.Departments
 import com.example.campusia.entities.PasswordRequirement
 import com.example.campusia.entities.User
 import com.example.campusia.entities.mapRole
@@ -107,12 +108,8 @@ fun RegisterScreen(
     var isPasswordConformationVisible by remember { mutableStateOf(false) }
 
     val roles = listOf("Student", "Lecturer")
-    val departments = listOf(
-        "Engineering & Technology",
-        "Business & Social Sciences",
-        "Natural Sciences & Health",
-        "Computer & IT"
-    )
+    val departments =  remember { Departments.entries.map { it.displayName } }
+
 
     RegisterCardContainer {
         StudentHatIcon()
@@ -184,7 +181,8 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(4.dp))
 
         Column(
-            modifier = Modifier.padding(4.dp)
+            modifier = Modifier
+                .padding(4.dp)
                 .fillMaxWidth()){
             val requirements = listOf(
                 PasswordRequirement("At least 6 characters", password.length >= 6),
@@ -442,7 +440,8 @@ fun RegisterScreenContent() {
         RegisterFormLabel("Password")
         Spacer(modifier = Modifier.height(4.dp))
 
-        Column(modifier = Modifier.padding(4.dp)
+        Column(modifier = Modifier
+            .padding(4.dp)
             .fillMaxWidth()){
             val requirements = listOf(
                     PasswordRequirement("At least 6 characters", password.length >= 6),
