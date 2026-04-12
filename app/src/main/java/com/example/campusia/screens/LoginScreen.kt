@@ -1,5 +1,7 @@
 package com.example.campusia.screens
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -83,6 +86,7 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     AuthCardContainer {
         StudentHatIcon()
@@ -166,7 +170,8 @@ fun LoginScreen(
                     auth = auth,
                     email = email,
                     password = password,
-                    navController = navController
+                    navController = navController,
+                    context = context
                 )
             },
             modifier = Modifier
@@ -454,7 +459,8 @@ fun signIn(
     auth: FirebaseAuth,
     email: String,
     password: String,
-    navController: NavController
+    navController: NavController,
+    context: Context
 ) {
     if (email.isEmpty() || password.isEmpty()) return
 
@@ -479,4 +485,10 @@ fun signIn(
                 }
             }
         }
+        .addOnFailureListener { e ->
+            Toast.makeText(
+                context,
+                "Wrong credentials, please try again!",
+                Toast.LENGTH_LONG
+            ).show() }
 }
