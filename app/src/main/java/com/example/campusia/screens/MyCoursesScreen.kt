@@ -56,10 +56,12 @@ fun MyCoursesScreen(navController: NavHostController) {
             .padding(16.dp)
     ) {
 
-        RoundedButton(
-            text = "➕  New Course",
-            onClick = { navController.navigate("course_creation") }
-        )
+        if(role != UserRole.STUDENT) {
+            RoundedButton(
+                text = "➕  New Course",
+                onClick = { navController.navigate("course_creation") }
+            )
+        }
 
         Text(
             text = "My Courses",
@@ -78,8 +80,7 @@ fun MyCoursesScreen(navController: NavHostController) {
                 },
 
                 onEnroll = {
-                    // only student
-                    println("Enroll to ${course.title}")
+                    enrollToCourse(course, context)
                 },
 
                 onEdit = {
@@ -97,3 +98,37 @@ fun MyCoursesScreen(navController: NavHostController) {
 }
 
 
+fun enrollToCourse(
+    course: Course,
+    context: Context
+) {
+    val db = FirebaseFirestore.getInstance()
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+    if (course.studentIds.contains(userId)) {
+        Toast.makeText(context, "Already enrolled", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    if (course.enrolledStudents >= course.maxStudents) {
+        Toast.makeText(context, "Course is full", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    val docRef = db.collection("courses").document(course.courseId)
+
+    val updatedStudentIds = course.studentIds + userId
+    val updatedCount = course.enrolledStudents + 1
+
+    //update studentIds
+    docRef.update("studentIds", updatedStudentIds)
+
+    //update enrolledStudents
+    docRef.update("enrolledStudents", updatedCount)
+        .addOnSuccessListener {
+            Toast.makeText(context, "Enrolled!", Toast.LENGTH_SHORT).show()
+        }
+        .addOnFailureListener {
+            Toast.makeText(context, "Error", Toast.LENGTH_SHORT).show()
+        }
+}

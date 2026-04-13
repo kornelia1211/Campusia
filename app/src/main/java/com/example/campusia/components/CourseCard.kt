@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.campusia.entities.Course
 import com.example.campusia.entities.UserRole
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,13 +45,6 @@ fun CourseCard(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "about course.....",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
@@ -63,11 +57,17 @@ fun CourseCard(
             //variants, dependent on the role
             when (role) {
                 UserRole.STUDENT -> {
+                    val userId = FirebaseAuth.getInstance().currentUser?.uid
+                    val isEnrolled = userId != null && course.studentIds.contains(userId)
+
                     Button(
-                        onClick = { onEnroll?.invoke() },
-                        modifier = Modifier.fillMaxWidth()
+                        onClick = { if (!isEnrolled) onEnroll?.invoke() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isEnrolled
                     ) {
-                        Text("Enroll")
+                        Text(
+                            if (isEnrolled) "Enrolled" else "Enroll"
+                        )
                     }
                 }
 
