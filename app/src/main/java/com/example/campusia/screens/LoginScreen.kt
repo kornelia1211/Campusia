@@ -58,6 +58,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.campusia.SessionManager
+import com.example.campusia.components.StudentHatIcon
+import com.example.campusia.entities.mapRole
 import com.example.campusia.ui.theme.CampusiaTheme
 import com.example.campusia.ui.theme.CardBackground
 import com.example.campusia.ui.theme.FieldBorder
@@ -66,8 +68,6 @@ import com.example.campusia.ui.theme.PrimaryPurple
 import com.example.campusia.ui.theme.TextDark
 import com.example.campusia.ui.theme.TextMuted
 import com.google.firebase.auth.FirebaseAuth
-import com.example.campusia.components.StudentHatIcon
-import com.example.campusia.entities.mapRole
 import com.google.firebase.firestore.FirebaseFirestore
 
 private val AuthPageGradient = Brush.linearGradient(
@@ -117,9 +117,7 @@ fun LoginScreen(
 
         AuthTextField(
             value = email,
-            onValueChange = {
-                email = it
-            },
+            onValueChange = { email = it },
             placeholder = "student@university.edu",
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
@@ -133,9 +131,7 @@ fun LoginScreen(
 
         AuthTextField(
             value = password,
-            onValueChange = {
-                password = it
-            },
+            onValueChange = { password = it },
             placeholder = "••••••••",
             isPassword = !isPasswordVisible,
             keyboardOptions = KeyboardOptions(
@@ -255,9 +251,7 @@ fun LoginScreenContent() {
 
         AuthTextField(
             value = email,
-            onValueChange = {
-                email = it
-            },
+            onValueChange = { email = it },
             placeholder = "student@university.edu",
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
@@ -271,9 +265,7 @@ fun LoginScreenContent() {
 
         AuthTextField(
             value = password,
-            onValueChange = {
-                password = it
-            },
+            onValueChange = { password = it },
             placeholder = "••••••••",
             isPassword = !isPasswordVisible,
             keyboardOptions = KeyboardOptions(
@@ -462,33 +454,60 @@ fun signIn(
     navController: NavController,
     context: Context
 ) {
-    if (email.isEmpty() || password.isEmpty()) return
+    if (email.isBlank() || password.isBlank()) {
+        Toast.makeText(
+            context,
+            "Please fill in email and password.",
+            Toast.LENGTH_LONG
+        ).show()
+        return
+    }
 
     auth.signInWithEmailAndPassword(email, password)
-        .addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val userId = auth.currentUser?.uid
-                val db = FirebaseFirestore.getInstance()
+        .addOnSuccessListener {
+            val userId = auth.currentUser?.uid
 
-                if (userId != null) {
-                    db.collection("users")
-                        .document(userId)
-                        .get()
-                        .addOnSuccessListener { document ->
-                            val roleString = document.getString("role") ?: "Student"
-                            val role = mapRole(roleString)
-
-                            //save role globally
-                            SessionManager.userRole = role
-                            navController.navigate("courses_screen")
-                        }
+            if (userId == null) {
+                navController.navigate("home_screen") {
+                    popUpTo("login_screen") { inclusive = true }
+                    launchSingleTop = true
                 }
+                return@addOnSuccessListener
             }
+
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(userId)
+                .get()
+                .addOnSuccessListener { document ->
+                    try {
+                        val roleString = document.getString("role") ?: "Student"
+                        SessionManager.userRole = mapRole(roleString)
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            context,
+                            "Role loading error: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+
+                    navController.navigate("home_screen") {
+                        popUpTo("login_screen") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+                .addOnFailureListener {
+                    navController.navigate("home_screen") {
+                        popUpTo("login_screen") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
         }
-        .addOnFailureListener { e ->
+        .addOnFailureListener {
             Toast.makeText(
                 context,
                 "Wrong credentials, please try again!",
                 Toast.LENGTH_LONG
-            ).show() }
+            ).show()
+        }
 }

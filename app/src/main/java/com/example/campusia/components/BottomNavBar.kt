@@ -1,16 +1,16 @@
 package com.example.campusia.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Assignment
@@ -19,19 +19,23 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 
-private val SelectedColor = Color(0xFF7C6CF2)
-private val UnselectedColor = Color(0xFF8E8E8E)
+private val SelectedColor = Color(0xFF8B7CF6)
+private val UnselectedColor = Color(0xFF7C7C86)
+private val BarBackground = Color.White
 
 @Composable
 fun BottomNavBar(
@@ -40,89 +44,101 @@ fun BottomNavBar(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
+        color = BarBackground,
         shadowElevation = 8.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(BarBackground)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(72.dp)
-                    .padding(horizontal = 4.dp),
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BottomNavItem(
+                    modifier = Modifier.weight(1f),
                     label = "Home",
                     selected = selectedItem == "home",
                     icon = {
                         Icon(
                             imageVector = Icons.Outlined.Home,
-                            contentDescription = "Home"
+                            contentDescription = "Home",
+                            modifier = Modifier.size(22.dp)
                         )
                     },
                     onClick = {
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = false }
+                        navController.navigate("home_screen") {
+                            popUpTo(navController.graph.startDestinationId)
                             launchSingleTop = true
+                            restoreState = true
                         }
                     }
                 )
 
                 BottomNavItem(
+                    modifier = Modifier.weight(1f),
                     label = "Courses",
                     selected = selectedItem == "courses",
                     icon = {
                         Icon(
                             imageVector = Icons.Outlined.MenuBook,
-                            contentDescription = "Courses"
+                            contentDescription = "Courses",
+                            modifier = Modifier.size(22.dp)
                         )
                     },
                     onClick = {
-                        navController.navigate("my_courses") {
+                        navController.navigate("courses_screen") {
+                            popUpTo(navController.graph.startDestinationId)
                             launchSingleTop = true
+                            restoreState = true
                         }
                     }
                 )
 
                 BottomNavItem(
+                    modifier = Modifier.weight(1f),
                     label = "Assignments",
-                    selected = false,
+                    selected = selectedItem == "assignments",
                     icon = {
                         Icon(
                             imageVector = Icons.Outlined.Assignment,
-                            contentDescription = "Assignments"
+                            contentDescription = "Assignments",
+                            modifier = Modifier.size(22.dp)
                         )
                     },
-                    onClick = null
+                    onClick = { }
                 )
 
                 BottomNavItem(
+                    modifier = Modifier.weight(1f),
                     label = "Chat",
-                    selected = false,
+                    selected = selectedItem == "chat",
                     icon = {
                         Icon(
                             imageVector = Icons.Outlined.ChatBubbleOutline,
-                            contentDescription = "Chat"
+                            contentDescription = "Chat",
+                            modifier = Modifier.size(22.dp)
                         )
                     },
-                    onClick = null
+                    onClick = { }
                 )
 
                 BottomNavItem(
+                    modifier = Modifier.weight(1f),
                     label = "Notifications",
-                    selected = false,
+                    selected = selectedItem == "notifications",
                     icon = {
                         Icon(
                             imageVector = Icons.Outlined.NotificationsNone,
-                            contentDescription = "Notifications"
+                            contentDescription = "Notifications",
+                            modifier = Modifier.size(22.dp)
                         )
                     },
-                    onClick = null
+                    onClick = { }
                 )
             }
 
@@ -135,41 +151,37 @@ fun BottomNavBar(
 
 @Composable
 private fun BottomNavItem(
+    modifier: Modifier = Modifier,
     label: String,
     selected: Boolean,
     icon: @Composable () -> Unit,
-    onClick: (() -> Unit)?
+    onClick: () -> Unit
 ) {
     val contentColor = if (selected) SelectedColor else UnselectedColor
 
     Column(
-        modifier = Modifier
-            .height(72.dp)
-            .padding(vertical = 8.dp)
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable { onClick() }
-                } else {
-                    Modifier
-                }
-            ),
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onClick() }
+                )
+            }
+            .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box {
-            androidx.compose.runtime.CompositionLocalProvider(
-                androidx.compose.material3.LocalContentColor provides contentColor
-            ) {
-                icon()
-            }
+        CompositionLocalProvider(
+            LocalContentColor provides contentColor
+        ) {
+            icon()
         }
 
         Text(
             text = label,
             color = contentColor,
-            fontSize = 11.sp,
-            textAlign = TextAlign.Center,
-            maxLines = 1
+            fontSize = 9.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Clip
         )
     }
 }
