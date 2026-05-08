@@ -48,6 +48,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -113,25 +114,94 @@ fun CourseType.toDisplayName(): String = when (this) {
 
 @Composable
 fun CourseCreationScreen(
-    navController: NavHostController
+    navController: NavHostController,
+    courseId: String? = null
 ) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var maxStudents by remember { mutableStateOf("") }
-    var providedLecturerIds by remember { mutableStateOf("") }
+    var courseToEdit by remember {
+        mutableStateOf<Course?>(null)
+    }
 
-    var selectedDepartment by remember { mutableStateOf<Departments?>(null) }
-    var selectedDay by remember { mutableStateOf<DayOfWeek?>(null) }
-    var selectedFrequency by remember { mutableStateOf<CourseFrequency?>(null) }
-    var selectedType by remember { mutableStateOf<CourseType?>(null) }
+    var title by remember(courseToEdit) {
+        mutableStateOf(courseToEdit?.title ?: "")
+    }
 
-    var startHour by remember { mutableStateOf("08") }
-    var startMinute by remember { mutableStateOf("00") }
-    var endHour by remember { mutableStateOf("10") }
-    var endMinute by remember { mutableStateOf("00") }
+    var description by remember(courseToEdit) {
+        mutableStateOf(courseToEdit?.description ?: "")
+    }
 
-    var room by remember { mutableStateOf("") }
-    var building by remember { mutableStateOf("") }
+    var maxStudents by remember(courseToEdit) {
+        mutableStateOf(courseToEdit?.maxStudents?.toString() ?: "")
+    }
+
+    var providedLecturerIds by remember(courseToEdit) {
+        mutableStateOf(
+            courseToEdit?.lecturerIds?.joinToString(", ") ?: ""
+        )
+    }
+
+    var selectedDepartment by remember(courseToEdit) {
+        mutableStateOf(
+            Departments.entries.firstOrNull {
+                it.displayName == courseToEdit?.department
+            }
+        )
+    }
+
+    var selectedDay by remember(courseToEdit) {
+        mutableStateOf(courseToEdit?.schedule?.dayOfWeek)
+    }
+
+    var selectedFrequency by remember(courseToEdit) {
+        mutableStateOf(courseToEdit?.schedule?.frequency)
+    }
+
+    var selectedType by remember(courseToEdit) {
+        mutableStateOf(courseToEdit?.schedule?.type)
+    }
+
+    var startHour by remember(courseToEdit) {
+        mutableStateOf(
+            courseToEdit?.schedule?.startTime
+                ?.split(":")
+                ?.getOrNull(0)
+                ?: "08"
+        )
+    }
+
+    var startMinute by remember(courseToEdit) {
+        mutableStateOf(
+            courseToEdit?.schedule?.startTime
+                ?.split(":")
+                ?.getOrNull(1)
+                ?: "00"
+        )
+    }
+
+    var endHour by remember(courseToEdit) {
+        mutableStateOf(
+            courseToEdit?.schedule?.endTime
+                ?.split(":")
+                ?.getOrNull(0)
+                ?: "10"
+        )
+    }
+
+    var endMinute by remember(courseToEdit) {
+        mutableStateOf(
+            courseToEdit?.schedule?.endTime
+                ?.split(":")
+                ?.getOrNull(1)
+                ?: "00"
+        )
+    }
+
+    var room by remember(courseToEdit) {
+        mutableStateOf(courseToEdit?.schedule?.room ?: "")
+    }
+
+    var building by remember(courseToEdit) {
+        mutableStateOf(courseToEdit?.schedule?.building ?: "")
+    }
 
     val context = LocalContext.current
     val days = listOf(
@@ -143,6 +213,22 @@ fun CourseCreationScreen(
         DayOfWeek.SATURDAY,
         DayOfWeek.SUNDAY
     )
+
+    LaunchedEffect(courseId) {
+
+        if (courseId != null) {
+
+            FirebaseFirestore.getInstance()
+                .collection("courses")
+                .document(courseId)
+                .get()
+                .addOnSuccessListener { document ->
+
+                    courseToEdit =
+                        document.toObject(Course::class.java)
+                }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -180,7 +266,8 @@ fun CourseCreationScreen(
                 placeholder = "Select department",
                 items = Departments.entries.map { it.displayName },
                 onItemSelected = { chosen ->
-                    selectedDepartment = Departments.entries.firstOrNull { it.displayName == chosen }
+                    selectedDepartment =
+                        Departments.entries.firstOrNull { it.displayName == chosen }
                 }
             )
 
@@ -214,7 +301,8 @@ fun CourseCreationScreen(
                 placeholder = "Select frequency",
                 items = CourseFrequency.entries.map { it.toDisplayName() },
                 onItemSelected = { chosen ->
-                    selectedFrequency = CourseFrequency.entries.firstOrNull { it.toDisplayName() == chosen }
+                    selectedFrequency =
+                        CourseFrequency.entries.firstOrNull { it.toDisplayName() == chosen }
                 }
             )
 
@@ -289,7 +377,11 @@ fun CourseCreationScreen(
                 val maxStudentsInt = maxStudents.toIntOrNull()
 
                 if (title.isBlank() || description.isBlank()) {
-                    Toast.makeText(context, "Please fill in title and description", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Please fill in title and description",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
@@ -299,7 +391,11 @@ fun CourseCreationScreen(
                 }
 
                 if (maxStudentsInt == null || maxStudentsInt <= 0) {
-                    Toast.makeText(context, "Please enter a valid number of students", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Please enter a valid number of students",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
@@ -318,11 +414,34 @@ fun CourseCreationScreen(
                     return@Button
                 }
 
-                val startTotalMinutes = startHour.toInt() * 60 + startMinute.toInt()
-                val endTotalMinutes = endHour.toInt() * 60 + endMinute.toInt()
+                val startHourInt = startHour.toIntOrNull()
+                val startMinuteInt = startMinute.toIntOrNull()
+                val endHourInt = endHour.toIntOrNull()
+                val endMinuteInt = endMinute.toIntOrNull()
+
+                if (
+                    startHourInt == null ||
+                    startMinuteInt == null ||
+                    endHourInt == null ||
+                    endMinuteInt == null
+                ) {
+                    Toast.makeText(
+                        context,
+                        "Please select valid start and end times",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@Button
+                }
+
+                val startTotalMinutes = startHourInt * 60 + startMinuteInt
+                val endTotalMinutes = endHourInt * 60 + endMinuteInt
 
                 if (endTotalMinutes <= startTotalMinutes) {
-                    Toast.makeText(context, "End time must be later than start time", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "End time must be later than start time",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
@@ -355,16 +474,38 @@ fun CourseCreationScreen(
                     type = selectedType!!
                 )
 
-                createCourse(
-                    title = title,
-                    description = description,
-                    department = selectedDepartment!!.displayName,
-                    schedule = scheduleObject,
-                    maxStudents = maxStudentsInt,
-                    providedLecturerIds = lecturersList,
-                    context = context,
-                    onSuccess = { navController.navigate("courses_screen") }
-                )
+                if (courseToEdit == null) {
+                    createCourse(
+                        title = title,
+                        description = description,
+                        department = selectedDepartment!!.displayName,
+                        schedule = scheduleObject,
+                        maxStudents = maxStudentsInt,
+                        providedLecturerIds = lecturersList,
+                        context = context,
+                        onSuccess = {
+                            navController.navigate("courses_screen")
+                        }
+                    )
+                } else {
+                    val editingCourse = courseToEdit ?: return@Button
+
+                    updateCourse(
+                        courseId = editingCourse.courseId,
+                        title = title,
+                        description = description,
+                        department = selectedDepartment!!.displayName,
+                        schedule = scheduleObject,
+                        maxStudents = maxStudentsInt,
+                        lecturerIds = lecturersList,
+                        studentIds = editingCourse.studentIds,
+                        enrolledStudents = editingCourse.enrolledStudents,
+                        context = context,
+                        onSuccess = {
+                            navController.navigate("courses_screen")
+                        }
+                    )
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -377,7 +518,11 @@ fun CourseCreationScreen(
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
         ) {
             Text(
-                text = "Create Course",
+                text = if (courseToEdit == null) {
+                    "Create Course"
+                } else {
+                    "Save Changes"
+                },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -849,4 +994,53 @@ fun CourseCreationScreenPreview() {
             navController = rememberNavController()
         )
     }
+}
+
+
+fun updateCourse(
+    courseId: String,
+    title: String,
+    description: String,
+    department: String,
+    schedule: CourseSchedule,
+    maxStudents: Int,
+    lecturerIds: List<String>,
+    studentIds: List<String>,
+    enrolledStudents: Int,
+    context: Context,
+    onSuccess: () -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    val updatedCourse = Course(
+        courseId = courseId,
+        title = title,
+        description = description,
+        department = department,
+        maxStudents = maxStudents,
+        lecturerIds = lecturerIds,
+        studentIds = studentIds,
+        enrolledStudents = enrolledStudents,
+        schedule = schedule
+    )
+
+    db.collection("courses")
+        .document(courseId)
+        .set(updatedCourse)
+        .addOnSuccessListener {
+            Toast.makeText(
+                context,
+                "Course updated successfully",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            onSuccess()
+        }
+        .addOnFailureListener {
+            Toast.makeText(
+                context,
+                "Failed to update course",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
 }

@@ -74,10 +74,31 @@ fun MyCoursesScreen(navController: NavHostController) {
     var listenerRegistration: ListenerRegistration? by remember { mutableStateOf(null) }
 
     LaunchedEffect(Unit) {
-        listenerRegistration = db.collection("courses")
+
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+
+        val query = when (role) {
+
+            UserRole.LECTURER -> {
+                db.collection("courses")
+                    .whereArrayContains("lecturerIds", currentUserId ?: "")
+            }
+
+            else -> {
+                db.collection("courses")
+            }
+        }
+
+        listenerRegistration = query
             .addSnapshotListener { snapshot, error ->
+
                 if (error != null) {
-                    Toast.makeText(context, "Error fetching data", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Error fetching data",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
                     return@addSnapshotListener
                 }
 
@@ -278,7 +299,9 @@ fun MyCoursesScreen(navController: NavHostController) {
                                 enrollToCourse(course, context)
                             },
                             onEdit = {
-                                println("Edit ${course.title}")
+                                navController.navigate(
+                                    "edit_course/${course.courseId}"
+                                )
                             },
                             onDelete = {
                                 println("Delete ${course.title}")

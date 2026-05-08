@@ -480,6 +480,10 @@ fun signIn(
                 .document(userId)
                 .get()
                 .addOnSuccessListener { document ->
+
+                    println("DOCUMENT DATA = ${document.data}")
+                    println("ROLE STRING = ${document.getString("role")}")
+
                     try {
                         val roleString = document.getString("role") ?: "Student"
                         SessionManager.userRole = mapRole(roleString)

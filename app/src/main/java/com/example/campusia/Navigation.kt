@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.campusia.entities.Course
 import com.example.campusia.screens.CourseCreationScreen
 import com.example.campusia.screens.HomeScreen
 import com.example.campusia.screens.LoginScreen
@@ -35,6 +36,18 @@ fun Navigation(auth: FirebaseAuth) {
             CourseCreationScreen(navController)
         }
 
+        composable(
+            route = "edit_course/{courseId}"
+        ) { backStackEntry ->
+
+            val courseId =
+                backStackEntry.arguments?.getString("courseId")
+
+            CourseCreationScreen(
+                navController = navController,
+                courseId = courseId
+            )
+        }
     }
 
 }
