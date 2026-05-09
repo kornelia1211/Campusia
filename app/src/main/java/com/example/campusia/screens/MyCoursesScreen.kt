@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.campusia.SessionManager
+import com.example.campusia.components.AlertDialogDelete
 import com.example.campusia.components.BottomNavBar
 import com.example.campusia.components.CourseCard
 import com.example.campusia.entities.Course
@@ -72,6 +74,9 @@ fun MyCoursesScreen(navController: NavHostController) {
     val context = LocalContext.current
 
     var listenerRegistration: ListenerRegistration? by remember { mutableStateOf(null) }
+    var courseToDelete by remember {
+        mutableStateOf<Course?>(null)
+    }
 
     LaunchedEffect(Unit) {
 
@@ -293,7 +298,9 @@ fun MyCoursesScreen(navController: NavHostController) {
                             course = course,
                             role = role,
                             onClick = {
-                                // TODO: open course details
+                                navController.navigate(
+                                    "course_detail/${course.courseId}"
+                                )
                             },
                             onEnroll = {
                                 enrollToCourse(course, context)
@@ -304,7 +311,7 @@ fun MyCoursesScreen(navController: NavHostController) {
                                 )
                             },
                             onDelete = {
-                                println("Delete ${course.title}")
+                                courseToDelete = course
                             }
                         )
                     }
@@ -316,6 +323,17 @@ fun MyCoursesScreen(navController: NavHostController) {
             }
         }
     }
+
+    courseToDelete?.let { course ->
+        AlertDialogDelete(
+            message = "Are you sure you want to delete the course \"${course.title}\"?",
+            onDismiss = { courseToDelete = null },
+            onConfirm = {
+                db.collection("courses").document(course.courseId).delete()
+                courseToDelete = null
+            }
+        )
+    }
 }
 
 fun enrollToCourse(
@@ -324,11 +342,6 @@ fun enrollToCourse(
 ) {
     val db = FirebaseFirestore.getInstance()
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
-    if (course.studentIds.contains(userId)) {
-        Toast.makeText(context, "Already enrolled", Toast.LENGTH_SHORT).show()
-        return
-    }
 
     if (course.enrolledStudents >= course.maxStudents) {
         Toast.makeText(context, "Course is full", Toast.LENGTH_SHORT).show()
