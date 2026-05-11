@@ -78,6 +78,9 @@ import com.example.campusia.ui.theme.CampusiaTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.type.DayOfWeek
+import com.example.campusia.entities.User
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.outlined.Done
 
 private val ScreenBackground = Color(0xFFF8F7FC)
 private val CardBackground = Color.White
@@ -133,10 +136,23 @@ fun CourseCreationScreen(
         mutableStateOf(courseToEdit?.maxStudents?.toString() ?: "")
     }
 
-    var providedLecturerIds by remember(courseToEdit) {
-        mutableStateOf(
-            courseToEdit?.lecturerIds?.joinToString(", ") ?: ""
-        )
+    var users by remember { mutableStateOf<List<User>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        FirebaseFirestore.getInstance()
+            .collection("users")
+            .get()
+            .addOnSuccessListener { result ->
+                users = result.documents.mapNotNull {
+                    it.toObject(User::class.java)
+                }
+            }
+    }
+
+    var searchQuery by remember { mutableStateOf("") }
+
+    var selectedLecturers by remember {
+        mutableStateOf<List<User>>(emptyList())
     }
 
     var selectedDepartment by remember(courseToEdit) {
@@ -363,13 +379,62 @@ fun CourseCreationScreen(
             )
         }
 
+        val filteredLecturers = remember(users, searchQuery) {
+            users.filter { user ->
+                user.role == "Lecturer" && (
+                        user.firstName.contains(searchQuery, ignoreCase = true) ||
+                                user.lastName.contains(searchQuery, ignoreCase = true)
+                        )
+            }
+        }
+
         FormSectionCard(title = "Lecturers") {
-            LabeledField(label = "Other Lecturers", icon = Icons.Outlined.Groups)
             StyledInputField(
-                value = providedLecturerIds,
-                onValueChange = { providedLecturerIds = it },
-                placeholder = "lecturerId1, lecturerId2"
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = "Search for other lecturers"
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            filteredLecturers.take(5).forEach { lecturer ->
+                val alreadySelected = selectedLecturers.any {
+                    it.userId == lecturer.userId
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            if (alreadySelected) {
+                                selectedLecturers = selectedLecturers.filter { it.userId != lecturer.userId }
+                            } else if (selectedLecturers.size < 3) {
+                                selectedLecturers = selectedLecturers + lecturer
+                            }
+                        }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${lecturer.firstName} ${lecturer.lastName}",
+                        modifier = Modifier.weight(1f),
+                        color = if (alreadySelected) PrimaryPurpleDark else TextPrimary,
+                        fontWeight = if (alreadySelected) FontWeight.Bold else FontWeight.Normal
+                    )
+
+                    if (alreadySelected) {
+                        Icon(
+                            imageVector = Icons.Outlined.Done,
+                            contentDescription = null,
+                            tint = PrimaryPurpleDark,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
         }
 
         Button(
@@ -455,14 +520,7 @@ fun CourseCreationScreen(
                     return@Button
                 }
 
-                val lecturersList = if (providedLecturerIds.isBlank()) {
-                    emptyList()
-                } else {
-                    providedLecturerIds
-                        .split(",")
-                        .map { it.trim() }
-                        .filter { it.isNotBlank() }
-                }
+                val lecturersList = selectedLecturers.map { it.userId }
 
                 val scheduleObject = CourseSchedule(
                     dayOfWeek = selectedDay!!,
