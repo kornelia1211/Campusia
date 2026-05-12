@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.outlined.Assignment
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Home
@@ -32,6 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.campusia.SessionManager
+import com.example.campusia.entities.UserRole
 
 private val SelectedColor = Color(0xFF8B7CF6)
 private val UnselectedColor = Color(0xFF7C7C86)
@@ -140,6 +143,23 @@ fun BottomNavBar(
                     },
                     onClick = { }
                 )
+
+                if (SessionManager.userRole != UserRole.ADMIN) {
+
+                    BottomNavItem(
+                        selected = selectedItem == "schedule",
+                        onClick = {
+                            navController.navigate("schedule_screen")
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Schedule"
+                            )
+                        },
+                        label = "Schedule"
+                    )
+                }
             }
 
             Box(

@@ -10,6 +10,7 @@ import com.example.campusia.screens.LoginScreen
 import com.example.campusia.screens.MyCoursesScreen
 import com.example.campusia.screens.RegisterScreen
 import com.example.campusia.screens.CourseDetailsScreen
+import com.example.campusia.screens.ScheduleScreen
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
@@ -62,6 +63,10 @@ fun Navigation(auth: FirebaseAuth) {
                 )
             }
 
+        }
+
+        composable("schedule_screen") {
+            ScheduleScreen(navController)
         }
     }
 

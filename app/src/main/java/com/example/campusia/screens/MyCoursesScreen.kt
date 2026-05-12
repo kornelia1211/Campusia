@@ -160,6 +160,12 @@ fun MyCoursesScreen(navController: NavHostController) {
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
+                        text = role.name
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
                         text = if (role == UserRole.STUDENT) {
                             "Browse and manage your enrolled courses"
                         } else {
