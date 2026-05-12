@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.campusia.SessionManager
+import com.example.campusia.components.BottomNavBar
 import com.example.campusia.entities.Course
 import com.example.campusia.entities.CourseFrequency
 import com.example.campusia.entities.UserRole
@@ -51,7 +53,7 @@ fun ScheduleScreen(
 
                 val allCourses = snapshot.toObjects(Course::class.java)
 
-                courses = when(role) {
+                courses = when (role) {
 
                     UserRole.LECTURER -> {
                         allCourses.filter {
@@ -91,65 +93,76 @@ fun ScheduleScreen(
         DayOfWeek.SUNDAY
     )
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    Scaffold(
+        bottomBar = {
+            BottomNavBar(
+                navController = navController,
+                selectedItem = "schedule"
+            )
+        }
+    ) { innerPadding ->
 
-        orderedDays.forEach { day ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
 
-            val dayCourses = groupedCourses[day]
+            orderedDays.forEach { day ->
 
-            if (!dayCourses.isNullOrEmpty()) {
+                val dayCourses = groupedCourses[day]
 
-                item {
+                if (!dayCourses.isNullOrEmpty()) {
 
-                    Text(
-                        text = day.name.lowercase()
-                            .replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.headlineSmall
-                    )
+                    item {
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+                        Text(
+                            text = day.name.lowercase()
+                                .replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.headlineSmall
+                        )
 
-                items(dayCourses) { course ->
-
-                    val frequencyText = when(course.schedule.frequency) {
-                        CourseFrequency.EVERY_WEEK -> ""
-                        CourseFrequency.EVEN_WEEKS -> " (even weeks)"
-                        CourseFrequency.ODD_WEEKS -> " (odd weeks)"
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(4.dp)
-                    ) {
+                    items(dayCourses) { course ->
 
-                        Column(
-                            modifier = Modifier.padding(16.dp)
+                        val frequencyText = when (course.schedule.frequency) {
+                            CourseFrequency.EVERY_WEEK -> ""
+                            CourseFrequency.EVEN_WEEKS -> " (even weeks)"
+                            CourseFrequency.ODD_WEEKS -> " (odd weeks)"
+                        }
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(4.dp)
                         ) {
 
-                            Text(
-                                text = course.title,
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = course.title,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
 
-                            Text(
-                                text = "${course.schedule.startTime} - ${course.schedule.endTime}$frequencyText"
-                            )
+                                Spacer(modifier = Modifier.height(4.dp))
 
-                            Text(
-                                text = "${course.schedule.building} ${course.schedule.room}"
-                            )
+                                Text(
+                                    text = "${course.schedule.startTime} - ${course.schedule.endTime}$frequencyText"
+                                )
 
-                            Text(
-                                text = course.schedule.type.name
-                            )
+                                Text(
+                                    text = "${course.schedule.building} ${course.schedule.room}"
+                                )
+
+                                Text(
+                                    text = course.schedule.type.name
+                                )
+                            }
                         }
                     }
                 }

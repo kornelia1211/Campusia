@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,7 +60,8 @@ fun BottomNavBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 6.dp),
+                    .height(64.dp)
+                    .padding(horizontal = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -145,19 +148,20 @@ fun BottomNavBar(
                 )
 
                 if (SessionManager.userRole != UserRole.ADMIN) {
-
                     BottomNavItem(
+                        modifier = Modifier.weight(1f),
+                        label = "Schedule",
                         selected = selectedItem == "schedule",
-                        onClick = {
-                            navController.navigate("schedule_screen")
-                        },
                         icon = {
                             Icon(
                                 imageVector = Icons.Default.DateRange,
-                                contentDescription = "Schedule"
+                                contentDescription = "Schedule",
+                                modifier = Modifier.size(22.dp)
                             )
                         },
-                        label = "Schedule"
+                        onClick = {
+                            navController.navigate("schedule_screen")
+                        }
                     )
                 }
             }
@@ -181,27 +185,36 @@ private fun BottomNavItem(
 
     Column(
         modifier = modifier
+            .height(56.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { onClick() }
                 )
-            }
-            .padding(vertical = 4.dp),
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         CompositionLocalProvider(
             LocalContentColor provides contentColor
         ) {
-            icon()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                icon()
+            }
         }
 
         Text(
             text = label,
             color = contentColor,
-            fontSize = 9.sp,
+            fontSize = 8.sp,
             maxLines = 1,
-            overflow = TextOverflow.Clip
+            overflow = TextOverflow.Clip,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

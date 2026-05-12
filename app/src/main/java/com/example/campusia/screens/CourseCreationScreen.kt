@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,9 +26,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apartment
+import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Badge
 import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.MeetingRoom
@@ -42,6 +45,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -73,14 +78,12 @@ import com.example.campusia.entities.CourseFrequency
 import com.example.campusia.entities.CourseSchedule
 import com.example.campusia.entities.CourseType
 import com.example.campusia.entities.Departments
+import com.example.campusia.entities.User
 import com.example.campusia.entities.UserRole
 import com.example.campusia.ui.theme.CampusiaTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.type.DayOfWeek
-import com.example.campusia.entities.User
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.material.icons.outlined.Done
 
 private val ScreenBackground = Color(0xFFF8F7FC)
 private val CardBackground = Color.White
@@ -136,7 +139,9 @@ fun CourseCreationScreen(
         mutableStateOf(courseToEdit?.maxStudents?.toString() ?: "")
     }
 
-    var users by remember { mutableStateOf<List<User>>(emptyList()) }
+    var users by remember {
+        mutableStateOf<List<User>>(emptyList())
+    }
 
     LaunchedEffect(Unit) {
         FirebaseFirestore.getInstance()
@@ -149,7 +154,9 @@ fun CourseCreationScreen(
             }
     }
 
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by remember {
+        mutableStateOf("")
+    }
 
     var selectedLecturers by remember {
         mutableStateOf<List<User>>(emptyList())
@@ -220,6 +227,7 @@ fun CourseCreationScreen(
     }
 
     val context = LocalContext.current
+
     val days = listOf(
         DayOfWeek.MONDAY,
         DayOfWeek.TUESDAY,
@@ -231,17 +239,13 @@ fun CourseCreationScreen(
     )
 
     LaunchedEffect(courseId) {
-
         if (courseId != null) {
-
             FirebaseFirestore.getInstance()
                 .collection("courses")
                 .document(courseId)
                 .get()
                 .addOnSuccessListener { document ->
-
-                    courseToEdit =
-                        document.toObject(Course::class.java)
+                    courseToEdit = document.toObject(Course::class.java)
                 }
         }
     }
@@ -255,10 +259,21 @@ fun CourseCreationScreen(
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        TopIntroCard()
+        TopIntroCard(
+            onBackClick = {
+                navController.navigate("courses_screen") {
+                    popUpTo("courses_screen") {
+                        inclusive = false
+                    }
+                    launchSingleTop = true
+                }
+            },
+            isEditMode = courseId != null
+        )
 
         FormSectionCard(title = "Basic Information") {
             LabeledField(label = "Title", icon = Icons.Outlined.MenuBook)
+
             StyledInputField(
                 value = title,
                 onValueChange = { title = it },
@@ -268,6 +283,7 @@ fun CourseCreationScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             LabeledField(label = "Description", icon = Icons.Outlined.Subject)
+
             StyledInputField(
                 value = description,
                 onValueChange = { description = it },
@@ -277,6 +293,7 @@ fun CourseCreationScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             LabeledField(label = "Department", icon = Icons.Outlined.Apartment)
+
             DropdownSelector(
                 selectedValue = selectedDepartment?.displayName ?: "",
                 placeholder = "Select department",
@@ -290,6 +307,7 @@ fun CourseCreationScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             LabeledField(label = "Max Students", icon = Icons.Outlined.Groups)
+
             StyledInputField(
                 value = maxStudents,
                 onValueChange = { maxStudents = it.filter { char -> char.isDigit() } },
@@ -300,6 +318,7 @@ fun CourseCreationScreen(
 
         FormSectionCard(title = "Schedule") {
             LabeledField(label = "Day of week", icon = Icons.Outlined.CalendarToday)
+
             DropdownSelector(
                 selectedValue = selectedDay?.toDisplayName() ?: "",
                 placeholder = "Select day of week",
@@ -312,6 +331,7 @@ fun CourseCreationScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             LabeledField(label = "Frequency", icon = Icons.Outlined.EditCalendar)
+
             DropdownSelector(
                 selectedValue = selectedFrequency?.toDisplayName() ?: "",
                 placeholder = "Select frequency",
@@ -325,20 +345,21 @@ fun CourseCreationScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             LabeledField(label = "Course Type", icon = Icons.Outlined.Badge)
+
             DropdownSelector(
                 selectedValue = selectedType?.toDisplayName() ?: "",
                 placeholder = "Select type",
                 items = CourseType.entries.map { it.toDisplayName() },
                 onItemSelected = { chosen ->
-                    selectedType = CourseType.entries.firstOrNull { it.toDisplayName() == chosen }
+                    selectedType =
+                        CourseType.entries.firstOrNull { it.toDisplayName() == chosen }
                 }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
 
-
-
             LabeledField(label = "Start time", icon = Icons.Outlined.Schedule)
+
             TimePickerField(
                 selectedHour = startHour,
                 selectedMinute = startMinute,
@@ -351,6 +372,7 @@ fun CourseCreationScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             LabeledField(label = "End time", icon = Icons.Outlined.Schedule)
+
             TimePickerField(
                 selectedHour = endHour,
                 selectedMinute = endMinute,
@@ -363,6 +385,7 @@ fun CourseCreationScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             LabeledField(label = "Room", icon = Icons.Outlined.MeetingRoom)
+
             StyledInputField(
                 value = room,
                 onValueChange = { room = it },
@@ -372,6 +395,7 @@ fun CourseCreationScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             LabeledField(label = "Building", icon = Icons.Outlined.Apartment)
+
             StyledInputField(
                 value = building,
                 onValueChange = { building = it },
@@ -410,7 +434,8 @@ fun CourseCreationScreen(
                             indication = null
                         ) {
                             if (alreadySelected) {
-                                selectedLecturers = selectedLecturers.filter { it.userId != lecturer.userId }
+                                selectedLecturers =
+                                    selectedLecturers.filter { it.userId != lecturer.userId }
                             } else if (selectedLecturers.size < 3) {
                                 selectedLecturers = selectedLecturers + lecturer
                             }
@@ -451,7 +476,11 @@ fun CourseCreationScreen(
                 }
 
                 if (selectedDepartment == null) {
-                    Toast.makeText(context, "Please select a department", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Please select a department",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
@@ -465,17 +494,29 @@ fun CourseCreationScreen(
                 }
 
                 if (selectedDay == null) {
-                    Toast.makeText(context, "Please select a day", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Please select a day",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
                 if (selectedFrequency == null) {
-                    Toast.makeText(context, "Please select frequency", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Please select frequency",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
                 if (selectedType == null) {
-                    Toast.makeText(context, "Please select course type", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Please select course type",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
@@ -511,12 +552,20 @@ fun CourseCreationScreen(
                 }
 
                 if (room.isBlank()) {
-                    Toast.makeText(context, "Please enter room", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Please enter room",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
                 if (building.isBlank()) {
-                    Toast.makeText(context, "Please enter building", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Please enter building",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
@@ -591,7 +640,10 @@ fun CourseCreationScreen(
 }
 
 @Composable
-private fun TopIntroCard() {
+private fun TopIntroCard(
+    onBackClick: () -> Unit,
+    isEditMode: Boolean
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -605,17 +657,48 @@ private fun TopIntroCard() {
                     )
                 )
             )
-            .padding(20.dp)
+            .padding(horizontal = 16.dp, vertical = 18.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .size(38.dp)
+                    .background(
+                        color = Color.White.copy(alpha = 0.22f),
+                        shape = CircleShape
+                    ),
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = Color.White
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ArrowBack,
+                    contentDescription = "Back to courses"
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
             Text(
-                text = "Create New Course",
+                text = if (isEditMode) {
+                    "Edit Course"
+                } else {
+                    "Create New Course"
+                },
                 color = Color.White,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
-                text = "Fill in the details below to add a new course.",
+                text = if (isEditMode) {
+                    "Update the course details below."
+                } else {
+                    "Fill in the details below to add a new course."
+                },
                 color = Color.White.copy(alpha = 0.92f),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -644,7 +727,9 @@ private fun FormSectionCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+
             Spacer(modifier = Modifier.height(16.dp))
+
             content()
         }
     }
@@ -724,7 +809,9 @@ fun DropdownSelector(
     items: List<String>,
     onItemSelected: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember {
+        mutableStateOf(false)
+    }
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -734,7 +821,9 @@ fun DropdownSelector(
                 .background(Color.White)
                 .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
                 .pointerInput(Unit) {
-                    detectTapGestures { expanded = true }
+                    detectTapGestures {
+                        expanded = true
+                    }
                 }
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -755,7 +844,9 @@ fun DropdownSelector(
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
+            onDismissRequest = {
+                expanded = false
+            },
             modifier = Modifier.fillMaxWidth(0.95f)
         ) {
             items.forEach { item ->
@@ -794,7 +885,9 @@ private fun TimeOptionChip(
             )
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { onClick() }
+                    onTap = {
+                        onClick()
+                    }
                 )
             }
             .padding(vertical = 12.dp),
@@ -815,7 +908,9 @@ fun TimePickerField(
     selectedMinute: String,
     onTimeSelected: (String, String) -> Unit
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    var showDialog by remember {
+        mutableStateOf(false)
+    }
 
     Box(
         modifier = Modifier
@@ -825,7 +920,9 @@ fun TimePickerField(
             .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { showDialog = true }
+                    onTap = {
+                        showDialog = true
+                    }
                 )
             }
             .padding(horizontal = 16.dp, vertical = 16.dp)
@@ -854,7 +951,9 @@ fun TimePickerField(
         TimeSelectionDialog(
             initialHour = selectedHour.toIntOrNull() ?: 8,
             initialMinute = selectedMinute,
-            onDismiss = { showDialog = false },
+            onDismiss = {
+                showDialog = false
+            },
             onConfirm = { hour, minute ->
                 onTimeSelected(
                     hour.toString().padStart(2, '0'),
@@ -873,21 +972,37 @@ private fun TimeSelectionDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int, String) -> Unit
 ) {
-    var selectedHour by remember { mutableIntStateOf(initialHour.coerceIn(0, 23)) }
-    var selectedMinute by remember { mutableStateOf(initialMinute) }
+    var selectedHour by remember {
+        mutableIntStateOf(initialHour.coerceIn(0, 23))
+    }
+
+    var selectedMinute by remember {
+        mutableStateOf(initialMinute)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(selectedHour, selectedMinute) }
+                onClick = {
+                    onConfirm(selectedHour, selectedMinute)
+                }
             ) {
-                Text("Save", color = PrimaryPurpleDark, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = "Save",
+                    color = PrimaryPurpleDark,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = TextPrimary)
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text(
+                    text = "Cancel",
+                    color = TextPrimary
+                )
             }
         },
         title = {
@@ -898,7 +1013,9 @@ private fun TimeSelectionDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
                 Text(
                     text = "Hour",
                     color = TextPrimary,
@@ -907,7 +1024,9 @@ private fun TimeSelectionDialog(
 
                 HourSelector(
                     selectedHour = selectedHour,
-                    onHourSelected = { selectedHour = it }
+                    onHourSelected = {
+                        selectedHour = it
+                    }
                 )
 
                 Text(
@@ -918,7 +1037,9 @@ private fun TimeSelectionDialog(
 
                 MinuteSelector(
                     selectedMinute = selectedMinute,
-                    onMinuteSelected = { selectedMinute = it }
+                    onMinuteSelected = {
+                        selectedMinute = it
+                    }
                 )
 
                 Box(
@@ -955,7 +1076,9 @@ private fun HourSelector(
         (18..23).toList()
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         hourRows.forEach { rowHours ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -965,7 +1088,9 @@ private fun HourSelector(
                     TimeOptionChip(
                         text = hour.toString().padStart(2, '0'),
                         selected = selectedHour == hour,
-                        onClick = { onHourSelected(hour) },
+                        onClick = {
+                            onHourSelected(hour)
+                        },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -989,7 +1114,9 @@ private fun MinuteSelector(
             TimeOptionChip(
                 text = minute,
                 selected = selectedMinute == minute,
-                onClick = { onMinuteSelected(minute) },
+                onClick = {
+                    onMinuteSelected(minute)
+                },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -1018,7 +1145,11 @@ fun createCourse(
     }
 
     if (finalLecturerIds.isEmpty()) {
-        Toast.makeText(context, "Please select at least one lecturer", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            context,
+            "Please select at least one lecturer",
+            Toast.LENGTH_SHORT
+        ).show()
         return
     }
 
@@ -1036,24 +1167,21 @@ fun createCourse(
 
     courseRef.set(newCourse)
         .addOnSuccessListener {
-            Toast.makeText(context, "Course was successfully created!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "Course was successfully created!",
+                Toast.LENGTH_SHORT
+            ).show()
             onSuccess()
         }
         .addOnFailureListener {
-            Toast.makeText(context, "Failed to create course", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "Failed to create course",
+                Toast.LENGTH_SHORT
+            ).show()
         }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun CourseCreationScreenPreview() {
-    CampusiaTheme {
-        CourseCreationScreen(
-            navController = rememberNavController()
-        )
-    }
-}
-
 
 fun updateCourse(
     courseId: String,
@@ -1101,4 +1229,14 @@ fun updateCourse(
                 Toast.LENGTH_SHORT
             ).show()
         }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CourseCreationScreenPreview() {
+    CampusiaTheme {
+        CourseCreationScreen(
+            navController = rememberNavController()
+        )
+    }
 }
