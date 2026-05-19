@@ -1,5 +1,7 @@
 package com.example.campusia.screens
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -136,7 +138,12 @@ fun ScheduleScreen(
                         }
 
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable (
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null){
+                                    navController.navigate("course_detail/${course.courseId}")},
                             elevation = CardDefaults.cardElevation(4.dp)
                         ) {
 
