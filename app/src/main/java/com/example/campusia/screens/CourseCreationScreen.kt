@@ -3,9 +3,7 @@ package com.example.campusia.screens
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +25,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Badge
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Done
@@ -37,25 +34,18 @@ import androidx.compose.material.icons.outlined.MeetingRoom
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Subject
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -73,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.campusia.SessionManager
+import com.example.campusia.components.DropdownSelector
 import com.example.campusia.entities.Course
 import com.example.campusia.entities.CourseFrequency
 import com.example.campusia.entities.CourseSchedule
@@ -84,15 +74,14 @@ import com.example.campusia.ui.theme.CampusiaTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.type.DayOfWeek
-
-private val ScreenBackground = Color(0xFFF8F7FC)
-private val CardBackground = Color.White
-private val PrimaryPurple = Color(0xFFA78BFA)
-private val PrimaryPurpleDark = Color(0xFF9333EA)
-private val SoftPurple = Color(0xFFF3E8FF)
-private val BorderColor = Color(0xFFE7E0F4)
-private val TextPrimary = Color(0xFF1F2937)
-private val PlaceholderColor = Color(0xFF9CA3AF)
+import com.example.campusia.components.LabeledField
+import com.example.campusia.components.StyledInputField
+import com.example.campusia.components.TimePickerField
+import com.example.campusia.ui.theme.PrimaryPurple
+import com.example.campusia.ui.theme.ScreenBackground
+import com.example.campusia.ui.theme.PrimaryPurpleDark
+import com.example.campusia.ui.theme.BorderColor
+import com.example.campusia.ui.theme.TextPrimary
 
 fun DayOfWeek.toDisplayName(): String = when (this) {
     DayOfWeek.MONDAY -> "Monday"
@@ -714,7 +703,7 @@ private fun FormSectionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = com.example.campusia.ui.theme.FieldBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
     ) {
@@ -735,393 +724,6 @@ private fun FormSectionCard(
     }
 }
 
-@Composable
-private fun LabeledField(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(SoftPurple),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = PrimaryPurpleDark,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-
-        Text(
-            text = label,
-            color = TextPrimary,
-            fontWeight = FontWeight.SemiBold,
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
-}
-
-@Composable
-private fun StyledInputField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        shape = RoundedCornerShape(16.dp),
-        placeholder = {
-            Text(
-                text = placeholder,
-                color = PlaceholderColor
-            )
-        },
-        keyboardOptions = keyboardOptions,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = PrimaryPurple,
-            unfocusedBorderColor = BorderColor,
-            focusedTextColor = TextPrimary,
-            unfocusedTextColor = TextPrimary,
-            cursorColor = PrimaryPurpleDark,
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
-            focusedPlaceholderColor = PlaceholderColor,
-            unfocusedPlaceholderColor = PlaceholderColor
-        )
-    )
-}
-
-@Composable
-fun DropdownSelector(
-    selectedValue: String,
-    placeholder: String,
-    items: List<String>,
-    onItemSelected: (String) -> Unit
-) {
-    var expanded by remember {
-        mutableStateOf(false)
-    }
-
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.White)
-                .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
-                .pointerInput(Unit) {
-                    detectTapGestures {
-                        expanded = true
-                    }
-                }
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (selectedValue.isBlank()) placeholder else selectedValue,
-                color = if (selectedValue.isBlank()) PlaceholderColor else TextPrimary,
-                style = MaterialTheme.typography.bodyLarge
-            )
-
-            Icon(
-                imageVector = Icons.Outlined.ArrowDropDown,
-                contentDescription = null,
-                tint = PrimaryPurpleDark
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = {
-                expanded = false
-            },
-            modifier = Modifier.fillMaxWidth(0.95f)
-        ) {
-            items.forEach { item ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = item,
-                            color = TextPrimary
-                        )
-                    },
-                    onClick = {
-                        onItemSelected(item)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TimeOptionChip(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) SoftPurple else Color.White)
-            .border(
-                width = 1.dp,
-                color = if (selected) PrimaryPurple else BorderColor,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        onClick()
-                    }
-                )
-            }
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = if (selected) PrimaryPurpleDark else TextPrimary,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
-}
-
-@Composable
-fun TimePickerField(
-    selectedHour: String,
-    selectedMinute: String,
-    onTimeSelected: (String, String) -> Unit
-) {
-    var showDialog by remember {
-        mutableStateOf(false)
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        showDialog = true
-                    }
-                )
-            }
-            .padding(horizontal = 16.dp, vertical = 16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "$selectedHour:$selectedMinute",
-                color = TextPrimary,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-
-            Icon(
-                imageVector = Icons.Outlined.Schedule,
-                contentDescription = null,
-                tint = PrimaryPurpleDark
-            )
-        }
-    }
-
-    if (showDialog) {
-        TimeSelectionDialog(
-            initialHour = selectedHour.toIntOrNull() ?: 8,
-            initialMinute = selectedMinute,
-            onDismiss = {
-                showDialog = false
-            },
-            onConfirm = { hour, minute ->
-                onTimeSelected(
-                    hour.toString().padStart(2, '0'),
-                    minute
-                )
-                showDialog = false
-            }
-        )
-    }
-}
-
-@Composable
-private fun TimeSelectionDialog(
-    initialHour: Int,
-    initialMinute: String,
-    onDismiss: () -> Unit,
-    onConfirm: (Int, String) -> Unit
-) {
-    var selectedHour by remember {
-        mutableIntStateOf(initialHour.coerceIn(0, 23))
-    }
-
-    var selectedMinute by remember {
-        mutableStateOf(initialMinute)
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm(selectedHour, selectedMinute)
-                }
-            ) {
-                Text(
-                    text = "Save",
-                    color = PrimaryPurpleDark,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss
-            ) {
-                Text(
-                    text = "Cancel",
-                    color = TextPrimary
-                )
-            }
-        },
-        title = {
-            Text(
-                text = "Select time",
-                color = TextPrimary,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(18.dp)
-            ) {
-                Text(
-                    text = "Hour",
-                    color = TextPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                HourSelector(
-                    selectedHour = selectedHour,
-                    onHourSelected = {
-                        selectedHour = it
-                    }
-                )
-
-                Text(
-                    text = "Minutes",
-                    color = TextPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                MinuteSelector(
-                    selectedMinute = selectedMinute,
-                    onMinuteSelected = {
-                        selectedMinute = it
-                    }
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(SoftPurple)
-                        .padding(vertical = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "${selectedHour.toString().padStart(2, '0')}:$selectedMinute",
-                        color = PrimaryPurpleDark,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        },
-        shape = RoundedCornerShape(24.dp),
-        containerColor = Color.White
-    )
-}
-
-@Composable
-private fun HourSelector(
-    selectedHour: Int,
-    onHourSelected: (Int) -> Unit
-) {
-    val hourRows = listOf(
-        (0..5).toList(),
-        (6..11).toList(),
-        (12..17).toList(),
-        (18..23).toList()
-    )
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        hourRows.forEach { rowHours ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                rowHours.forEach { hour ->
-                    TimeOptionChip(
-                        text = hour.toString().padStart(2, '0'),
-                        selected = selectedHour == hour,
-                        onClick = {
-                            onHourSelected(hour)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MinuteSelector(
-    selectedMinute: String,
-    onMinuteSelected: (String) -> Unit
-) {
-    val minuteOptions = listOf("00", "15", "30", "45")
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        minuteOptions.forEach { minute ->
-            TimeOptionChip(
-                text = minute,
-                selected = selectedMinute == minute,
-                onClick = {
-                    onMinuteSelected(minute)
-                },
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
 
 fun createCourse(
     title: String,
