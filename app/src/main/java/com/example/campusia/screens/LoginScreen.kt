@@ -61,7 +61,6 @@ import com.example.campusia.SessionManager
 import com.example.campusia.components.StudentHatIcon
 import com.example.campusia.entities.mapRole
 import com.example.campusia.ui.theme.CampusiaTheme
-import com.example.campusia.ui.theme.CardBackground
 import com.example.campusia.ui.theme.FieldBorder
 import com.example.campusia.ui.theme.PlaceholderColor
 import com.example.campusia.ui.theme.PrimaryPurple
@@ -356,7 +355,7 @@ private fun AuthCardContainer(
                 .padding(top = 88.dp)
                 .verticalScroll(rememberScrollState()),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBackground),
+            colors = CardDefaults.cardColors(containerColor = com.example.campusia.ui.theme.FieldBackground),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(

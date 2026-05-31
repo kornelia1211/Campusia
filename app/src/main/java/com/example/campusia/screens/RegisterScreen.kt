@@ -4,7 +4,6 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,8 +39,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,7 +71,6 @@ import com.example.campusia.entities.PasswordRequirement
 import com.example.campusia.entities.User
 import com.example.campusia.entities.mapRole
 import com.example.campusia.ui.theme.CampusiaTheme
-import com.example.campusia.ui.theme.CardBackground
 import com.example.campusia.ui.theme.FieldBorder
 import com.example.campusia.ui.theme.PlaceholderColor
 import com.example.campusia.ui.theme.PrimaryPurple
@@ -595,7 +591,7 @@ private fun RegisterCardContainer(
                 .padding(top = 88.dp)
                 .verticalScroll(rememberScrollState()),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBackground),
+            colors = CardDefaults.cardColors(containerColor = com.example.campusia.ui.theme.FieldBackground),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
