@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,7 +19,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -34,10 +38,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,23 +56,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.campusia.components.AlertDialogDelete
+import com.example.campusia.components.AssignmentCard
+import com.example.campusia.components.RoundedButton
+import com.example.campusia.entities.Assignment
 import com.example.campusia.entities.Course
 import com.example.campusia.entities.User
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-
-private val ScreenBackground = Color(0xFFF5F3F8)
-private val CardBackground = Color(0xFFFDFDFF)
-private val CardBorder = Color(0xFFE1DAF0)
-private val FieldBackground = Color(0xFFF8F6FC)
-private val IconCircle = Color(0xFFE9DDFB)
-private val AccentPurple = Color(0xFF8E49E8)
-private val AccentPurpleLight = Color(0xFFB8ACEF)
-private val TextPrimary = Color(0xFF2E3240)
-private val TextSecondary = Color(0xFF8B92A1)
-private val DangerRed = Color(0xFFE25555)
+import com.example.campusia.ui.theme.ScreenBackground
+import com.example.campusia.ui.theme.TextPrimary
+import com.example.campusia.ui.theme.FieldBackground
+import com.example.campusia.ui.theme.FieldBorder
+import com.example.campusia.ui.theme.IconCircle
+import com.example.campusia.ui.theme.PrimaryPurpleDark
+import com.example.campusia.ui.theme.PrimaryPurple
+import com.example.campusia.ui.theme.TextMuted
+import com.example.campusia.ui.theme.DangerRed
+import com.google.firebase.firestore.Query
 
 @Composable
 fun CourseDetailsScreen(
@@ -82,6 +92,8 @@ fun CourseDetailsScreen(
     var students by remember {
         mutableStateOf<List<User>>(emptyList())
     }
+
+    var assignments by remember { mutableStateOf<List<Assignment>>(emptyList()) }
 
     var studentToRemove by remember {
         mutableStateOf<User?>(null)
@@ -107,6 +119,15 @@ fun CourseDetailsScreen(
                     }
                 }
             }
+
+        db.collection("assignments")
+            .whereEqualTo("courseId", courseId)
+            .orderBy("dueDate", Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error == null && snapshot != null) {
+                    assignments = snapshot.toObjects(Assignment::class.java)
+                }
+            }
     }
 
     LazyColumn(
@@ -116,6 +137,67 @@ fun CourseDetailsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                RoundedButton(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Add,
+                    text = "Assignment",
+                    height = 40.dp,
+                    fontSize = 13.sp,
+                    iconSize = 17.dp,
+                    contentPadding = PaddingValues(horizontal = 4.dp),
+                    onClick = {
+                        navController.navigate("assignment_creation_screen/$courseId")
+                    }
+                )
+                RoundedButton(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.UploadFile,
+                    text = "Material",
+                    height = 40.dp,
+                    fontSize = 13.sp,
+                    iconSize = 17.dp,
+                    contentPadding = PaddingValues(horizontal = 4.dp),
+                    onClick = { Toast.makeText(context, "Upload Material Clicked", Toast.LENGTH_SHORT).show() }
+                )
+                RoundedButton(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Campaign,
+                    text = "Announce",
+                    height = 40.dp,
+                    fontSize = 13.sp,
+                    iconSize = 17.dp,
+                    contentPadding = PaddingValues(horizontal = 4.dp),
+                    onClick = { Toast.makeText(context, "Announcement Clicked", Toast.LENGTH_SHORT).show() }
+                )
+            }
+        }
+
+        // toDo: Move students and assignments to tabs
+
+        item {
+            SectionCard(title = "Course Assignments") {
+                if (assignments.isEmpty()) {
+                    Text(
+                        text = "No assignments assigned yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted
+                    )
+                } else {
+                    assignments.forEachIndexed { index, assignment ->
+                        AssignmentCard(assignment = assignment)
+                        if (index != assignments.lastIndex) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                    }
+                }
+            }
+        }
 
         item {
             HeaderCard(
@@ -139,7 +221,7 @@ fun CourseDetailsScreen(
                         Icon(
                             imageVector = Icons.Outlined.MenuBook,
                             contentDescription = "Title",
-                            tint = AccentPurple,
+                            tint = PrimaryPurpleDark,
                             modifier = Modifier.size(18.dp)
                         )
                     },
@@ -154,7 +236,7 @@ fun CourseDetailsScreen(
                         Icon(
                             imageVector = Icons.Outlined.Description,
                             contentDescription = "Description",
-                            tint = AccentPurple,
+                            tint = PrimaryPurpleDark,
                             modifier = Modifier.size(18.dp)
                         )
                     },
@@ -169,7 +251,7 @@ fun CourseDetailsScreen(
                         Icon(
                             imageVector = Icons.Outlined.Business,
                             contentDescription = "Department",
-                            tint = AccentPurple,
+                            tint = PrimaryPurpleDark,
                             modifier = Modifier.size(18.dp)
                         )
                     },
@@ -188,7 +270,7 @@ fun CourseDetailsScreen(
                         Icon(
                             imageVector = Icons.Outlined.CalendarMonth,
                             contentDescription = "Day",
-                            tint = AccentPurple,
+                            tint = PrimaryPurpleDark,
                             modifier = Modifier.size(18.dp)
                         )
                     },
@@ -203,7 +285,7 @@ fun CourseDetailsScreen(
                         Icon(
                             imageVector = Icons.Outlined.Schedule,
                             contentDescription = "Time",
-                            tint = AccentPurple,
+                            tint = PrimaryPurpleDark,
                             modifier = Modifier.size(18.dp)
                         )
                     },
@@ -218,7 +300,7 @@ fun CourseDetailsScreen(
                         Icon(
                             imageVector = Icons.Outlined.LocationOn,
                             contentDescription = "Room",
-                            tint = AccentPurple,
+                            tint = PrimaryPurpleDark,
                             modifier = Modifier.size(18.dp)
                         )
                     },
@@ -233,7 +315,7 @@ fun CourseDetailsScreen(
                         Icon(
                             imageVector = Icons.Outlined.Business,
                             contentDescription = "Building",
-                            tint = AccentPurple,
+                            tint = PrimaryPurpleDark,
                             modifier = Modifier.size(18.dp)
                         )
                     },
@@ -255,7 +337,7 @@ fun CourseDetailsScreen(
                             Icon(
                                 imageVector = Icons.Outlined.Groups,
                                 contentDescription = "Students",
-                                tint = AccentPurple,
+                                tint = PrimaryPurpleDark,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -322,8 +404,8 @@ private fun HeaderCard(
             .background(
                 brush = Brush.horizontalGradient(
                     colors = listOf(
-                        AccentPurpleLight,
-                        AccentPurple
+                        PrimaryPurple,
+                        PrimaryPurpleDark
                     )
                 )
             )
@@ -378,12 +460,12 @@ private fun SectionCard(
             .fillMaxWidth()
             .border(
                 width = 1.dp,
-                color = CardBorder,
+                color = FieldBorder,
                 shape = RoundedCornerShape(24.dp)
             ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = CardBackground
+            containerColor = FieldBackground
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 0.dp
@@ -437,7 +519,7 @@ private fun DetailRow(
                 .background(FieldBackground)
                 .border(
                     width = 1.dp,
-                    color = CardBorder,
+                    color = FieldBorder,
                     shape = RoundedCornerShape(18.dp)
                 )
                 .padding(horizontal = 16.dp, vertical = 16.dp)
@@ -445,7 +527,7 @@ private fun DetailRow(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextSecondary
+                color = TextMuted
             )
         }
     }
@@ -477,7 +559,7 @@ private fun StudentCard(
                     Icon(
                         imageVector = Icons.Outlined.Person,
                         contentDescription = "Student",
-                        tint = AccentPurple,
+                        tint = PrimaryPurpleDark,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -500,7 +582,7 @@ private fun StudentCard(
                 Text(
                     text = student.email,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
+                    color = TextMuted
                 )
             }
 
