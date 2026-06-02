@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.campusia.screens.AssignmentCreationScreen
+import com.example.campusia.screens.AssignmentDetailsScreen
 import com.example.campusia.screens.CourseCreationScreen
 import com.example.campusia.screens.HomeScreen
 import com.example.campusia.screens.LoginScreen
@@ -78,6 +79,23 @@ fun Navigation(auth: FirebaseAuth) {
                 AssignmentCreationScreen(
                     navController = navController,
                     courseId = courseId
+                )
+            }
+        }
+
+        composable(
+            "assignment_details/{assignmentId}"
+        ) { backStackEntry ->
+
+            val assignmentId =
+                backStackEntry.arguments
+                    ?.getString("assignmentId")
+
+            if (assignmentId != null) {
+
+                AssignmentDetailsScreen(
+                    navController = navController,
+                    assignmentId = assignmentId
                 )
             }
         }

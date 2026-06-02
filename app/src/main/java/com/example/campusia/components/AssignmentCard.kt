@@ -1,11 +1,13 @@
 package com.example.campusia.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,9 +19,11 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssignmentCard(
-    assignment: Assignment
+    assignment: Assignment,
+    onClick: () -> Unit
 ) {
 
     val formattedDate = remember(assignment.dueDate) {
@@ -29,6 +33,7 @@ fun AssignmentCard(
     }
 
     Card(
+        onClick = { onClick() },
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(10.dp)) {

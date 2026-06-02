@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -139,6 +138,19 @@ fun CourseDetailsScreen(
     ) {
 
         item {
+            HeaderCard(
+                onBackClick = {
+                    navController.navigate("courses_screen") {
+                        popUpTo("courses_screen") {
+                            inclusive = false
+                        }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
@@ -157,16 +169,6 @@ fun CourseDetailsScreen(
                 )
                 RoundedButton(
                     modifier = Modifier.weight(1f),
-                    icon = Icons.Default.UploadFile,
-                    text = "Material",
-                    height = 40.dp,
-                    fontSize = 13.sp,
-                    iconSize = 17.dp,
-                    contentPadding = PaddingValues(horizontal = 4.dp),
-                    onClick = { Toast.makeText(context, "Upload Material Clicked", Toast.LENGTH_SHORT).show() }
-                )
-                RoundedButton(
-                    modifier = Modifier.weight(1f),
                     icon = Icons.Default.Campaign,
                     text = "Announce",
                     height = 40.dp,
@@ -176,40 +178,6 @@ fun CourseDetailsScreen(
                     onClick = { Toast.makeText(context, "Announcement Clicked", Toast.LENGTH_SHORT).show() }
                 )
             }
-        }
-
-        // toDo: Move students and assignments to tabs
-
-        item {
-            SectionCard(title = "Course Assignments") {
-                if (assignments.isEmpty()) {
-                    Text(
-                        text = "No assignments assigned yet.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted
-                    )
-                } else {
-                    assignments.forEachIndexed { index, assignment ->
-                        AssignmentCard(assignment = assignment)
-                        if (index != assignments.lastIndex) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            HeaderCard(
-                onBackClick = {
-                    navController.navigate("courses_screen") {
-                        popUpTo("courses_screen") {
-                            inclusive = false
-                        }
-                        launchSingleTop = true
-                    }
-                }
-            )
         }
 
         item {
@@ -260,6 +228,37 @@ fun CourseDetailsScreen(
                 )
             }
         }
+
+        // toDo: Move students and assignments to tabs
+
+        item {
+            SectionCard(title = "Course Assignments") {
+                if (assignments.isEmpty()) {
+                    Text(
+                        text = "No assignments assigned yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted
+                    )
+                } else {
+                    assignments.forEachIndexed { index, assignment ->
+
+                        AssignmentCard(
+                            assignment = assignment,
+                            onClick = {
+                                navController.navigate(
+                                    "assignment_details/${assignment.assignmentId}"
+                                )
+                            }
+                        )
+
+                        if (index != assignments.lastIndex) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                    }
+                }
+            }
+        }
+
 
         item {
             SectionCard(

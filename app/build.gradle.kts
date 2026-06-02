@@ -56,11 +56,12 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)
 
-    // ✅ Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.ui.text)
+    implementation(libs.androidx.ui.graphics)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
