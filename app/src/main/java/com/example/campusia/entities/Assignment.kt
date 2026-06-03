@@ -8,5 +8,6 @@ data class Assignment(
     val courseId: String = "",
     val title: String = "",
     val description: String = "",
-    val dueDate: Timestamp? = null
+    val dueDate: Timestamp? = null,
+    val materials: List<AssignmentMaterial> = emptyList()
 )

@@ -84,6 +84,23 @@ fun Navigation(auth: FirebaseAuth) {
         }
 
         composable(
+            "edit_assignment/{assignmentId}/{courseId}"
+        ) { backStackEntry ->
+
+            AssignmentCreationScreen(
+                navController = navController,
+                courseId =
+                    backStackEntry.arguments
+                        ?.getString("courseId")
+                        ?: "",
+
+                assignmentId =
+                    backStackEntry.arguments
+                        ?.getString("assignmentId")
+            )
+        }
+
+        composable(
             "assignment_details/{assignmentId}"
         ) { backStackEntry ->
 

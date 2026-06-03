@@ -37,13 +37,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -241,13 +238,40 @@ fun CourseDetailsScreen(
                     )
                 } else {
                     assignments.forEachIndexed { index, assignment ->
-
                         AssignmentCard(
                             assignment = assignment,
+
                             onClick = {
                                 navController.navigate(
                                     "assignment_details/${assignment.assignmentId}"
                                 )
+                            },
+
+                            onEdit = {
+                                navController.navigate(
+                                    "edit_assignment/${assignment.assignmentId}/$courseId"
+                                )
+                            },
+
+                            onDelete = {
+
+                                FirebaseFirestore
+                                    .getInstance()
+                                    .collection("assignments")
+                                    .document(
+                                        assignment.assignmentId
+                                    )
+                                    .delete()
+
+                                    .addOnSuccessListener {
+
+                                        assignments =
+                                            assignments.filterNot {
+
+                                                it.assignmentId ==
+                                                        assignment.assignmentId
+                                            }
+                                    }
                             }
                         )
 

@@ -3,7 +3,10 @@ package com.example.campusia.screens
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.content.Context
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,12 +66,17 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import com.example.campusia.ui.theme.ScreenBackground
+import com.google.firebase.storage.FirebaseStorage
 import java.util.Calendar
+import java.util.UUID
+import com.example.campusia.entities.AssignmentMaterial
 
 @Composable
 fun AssignmentCreationScreen(
     navController: NavHostController,
-    courseId: String){
+    courseId: String,
+    assignmentId: String? = null
+){
 
     var title by remember{
         mutableStateOf("")
@@ -93,10 +102,98 @@ fun AssignmentCreationScreen(
 
     val context = LocalContext.current
 
+    var selectedFiles by remember {
+        mutableStateOf<List<Uri>>(emptyList())
+    }
+
+    var existingMaterials by remember {
+        mutableStateOf(
+            emptyList<AssignmentMaterial>()
+        )
+    }
+
+    val filePickerLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent()
+        ) { uri: Uri? ->
+
+            if (uri != null) {
+
+                selectedFiles =
+                    selectedFiles + uri
+
+                Toast.makeText(
+                    context,
+                    "File added",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
     val isFormValid =
         title.isNotBlank() &&
                 description.isNotBlank() &&
                 selectedDate.isNotBlank()
+
+    // Edit assignment
+    var assignmentToEdit by remember {
+        mutableStateOf<Assignment?>(null)
+    }
+
+    LaunchedEffect(assignmentId) {
+
+        if (assignmentId != null) {
+
+            FirebaseFirestore.getInstance()
+                .collection("assignments")
+                .document(assignmentId)
+                .get()
+                .addOnSuccessListener { document ->
+
+                    assignmentToEdit =
+                        document.toObject(
+                            Assignment::class.java
+                        )
+
+                    existingMaterials =
+                        assignmentToEdit
+                            ?.materials
+                            ?: emptyList()
+
+                    assignmentToEdit?.let {
+
+                        title = it.title
+                        description = it.description
+
+                        it.dueDate
+                            ?.toDate()
+                            ?.let { date ->
+
+                                val formatter =
+                                    SimpleDateFormat(
+                                        "MM/dd/yyyy",
+                                        Locale.getDefault()
+                                    )
+
+                                selectedDate =
+                                    formatter.format(date)
+
+                                dueHour =
+                                    SimpleDateFormat(
+                                        "HH",
+                                        Locale.getDefault()
+                                    ).format(date)
+
+                                dueMinute =
+                                    SimpleDateFormat(
+                                        "mm",
+                                        Locale.getDefault()
+                                    ).format(date)
+                            }
+                    }
+                }
+        }
+    }
 
     Scaffold(
 
@@ -123,7 +220,8 @@ fun AssignmentCreationScreen(
                     onBackClick = {
                         navController.popBackStack()
                     },
-                    isEditMode = false // toDO
+                    isEditMode =
+                        assignmentId != null
                 )
 
             LabeledField("Title", icon = Icons.Outlined.MenuBook)
@@ -219,27 +317,117 @@ fun AssignmentCreationScreen(
 
             UploadMaterialsCard(
                 onClick = {
-
-                    // TODO upload file
+                    filePickerLauncher.launch("*/*")
                 }
             )
 
-            RoundedButton(
-                text = "Create Assignment",
-                enabled = isFormValid,
-                onClick = {
-                    createAssignment(
-                        courseId = courseId,
-                        title = title,
-                        description = description,
-                        selectedDate = selectedDate,
-                        dueHour = dueHour,
-                        dueMinute = dueMinute,
-                        context = context,
-                        onSuccess = {
-                            navController.popBackStack()
+            if (existingMaterials.isNotEmpty()) {
+
+                Text(
+                    text = "Current Materials",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                existingMaterials.forEach { material ->
+
+                    UploadMaterialsCard(
+                        title = material.fileName,
+                        subtitle = "Already uploaded",
+                        onClick = {
+
+                            val intent =
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    Uri.parse(
+                                        material.downloadUrl
+                                    )
+                                )
+
+                            context.startActivity(
+                                intent
+                            )
                         }
                     )
+
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
+                    )
+                }
+            }
+
+            if (selectedFiles.isNotEmpty()) {
+
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
+
+                Text(
+                    text = "Uploaded Files",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                selectedFiles.forEach { file ->
+
+                    UploadMaterialsCard(
+                        title =
+                            file.lastPathSegment
+                                ?: "Selected file",
+
+                        subtitle =
+                            "Ready to upload",
+
+                        onClick = {
+
+                            // no-op
+                        }
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
+                    )
+                }
+            }
+
+            RoundedButton(
+                text =
+                    if (assignmentId == null)
+                        "Create Assignment"
+                    else
+                        "Save Changes",
+                enabled = isFormValid,
+                onClick = {
+                    if (assignmentId == null) {
+                        createAssignment(
+                            courseId = courseId,
+                            title = title,
+                            description = description,
+                            selectedDate = selectedDate,
+                            dueHour = dueHour,
+                            dueMinute = dueMinute,
+                            context = context,
+                            onSuccess = {
+                                navController.popBackStack()
+                            },
+                            selectedFiles = selectedFiles
+                        )
+                    } else {
+
+                        updateAssignment(
+                            assignmentId = assignmentId,
+                            title = title,
+                            description = description,
+                            selectedDate = selectedDate,
+                            dueHour = dueHour,
+                            dueMinute = dueMinute,
+                            context = context,
+                            selectedFiles = selectedFiles,
+                            onSuccess = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
                 }
             )
         }
@@ -255,6 +443,7 @@ fun createAssignment(
     dueHour: String,
     dueMinute: String,
     context: Context,
+    selectedFiles: List<Uri>,
     onSuccess: () -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
@@ -268,21 +457,49 @@ fun createAssignment(
     val parsedDate = formatter.parse(dueDateString) ?: throw Exception("Parsing failed")
     val firebaseTimestamp = Timestamp(parsedDate)
 
+
+    val assignmentRef =
+        db.collection("assignments")
+            .document()
+
+    val assignmentId =
+        assignmentRef.id
+
     val newAssignment = Assignment(
+        assignmentId = assignmentId,
         courseId = courseId,
         title = title,
         description = description,
         dueDate = firebaseTimestamp
     )
 
-    db.collection("assignments")
-        .add(newAssignment)
+    assignmentRef
+        .set(newAssignment)
         .addOnSuccessListener {
-            Toast.makeText(context, "Assignment was successfully created!", Toast.LENGTH_SHORT)
-                .show()
-            onSuccess()
-        }.addOnFailureListener { exception ->
-            Toast.makeText(context, exception.message, Toast.LENGTH_LONG).show()
+
+            uploadFilesForAssignment(
+                assignmentId = assignmentId,
+                files = selectedFiles,
+                context = context
+            ) {
+
+                Toast.makeText(
+                    context,
+                    "Assignment was successfully created!",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                onSuccess()
+            }
+
+        }
+        .addOnFailureListener { exception ->
+
+            Toast.makeText(
+                context,
+                exception.message,
+                Toast.LENGTH_LONG
+            ).show()
         }
 }
 
@@ -351,4 +568,164 @@ private fun TopIntroCard(
             )
         }
     }
+}
+
+
+fun uploadFile(
+    uri: Uri,
+    courseId: String,
+    context: Context
+) {
+
+    val storage =
+        FirebaseStorage.getInstance()
+
+    val storageRef =
+        storage.reference
+
+    val fileName =
+        UUID.randomUUID().toString()
+
+    val fileRef =
+        storageRef.child(
+            "assignments/$courseId/materials/$fileName"
+        )
+
+    fileRef
+        .putFile(uri)
+
+        .addOnSuccessListener {
+
+            Toast.makeText(
+                context,
+                "File uploaded successfully!",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+
+        .addOnFailureListener { e ->
+
+            Toast.makeText(
+                context,
+                "Upload failed: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+}
+
+fun uploadFilesForAssignment(
+    assignmentId: String,
+    files: List<Uri>,
+    context: Context,
+    onComplete: () -> Unit
+) {
+
+    if (files.isEmpty()) {
+        onComplete()
+        return
+    }
+
+    val storage =
+        FirebaseStorage.getInstance()
+
+    val db =
+        FirebaseFirestore.getInstance()
+
+    val uploadedMaterials =
+        mutableListOf<Map<String,String>>()
+
+    var completed = 0
+
+    files.forEach { uri ->
+
+        val fileName =
+            UUID.randomUUID().toString()
+
+        val ref =
+            storage.reference.child(
+                "assignments/$assignmentId/materials/$fileName"
+            )
+
+        ref.putFile(uri)
+
+            .addOnSuccessListener {
+
+                ref.downloadUrl
+                    .addOnSuccessListener { downloadUri ->
+
+                        uploadedMaterials.add(
+                            mapOf(
+                                "fileName" to fileName,
+                                "downloadUrl" to downloadUri.toString()
+                            )
+                        )
+
+                        completed++
+
+                        if (completed == files.size) {
+
+                            db.collection("assignments")
+                                .document(assignmentId)
+                                .update(
+                                    "materials",
+                                    uploadedMaterials
+                                )
+
+                            onComplete()
+                        }
+                    }
+            }
+    }
+}
+
+fun updateAssignment(
+    assignmentId: String,
+    title: String,
+    description: String,
+    selectedDate: String,
+    dueHour: String,
+    dueMinute: String,
+    context: Context,
+    selectedFiles: List<Uri>,
+    onSuccess: () -> Unit
+) {
+
+    val formatter =
+        SimpleDateFormat(
+            "MM/dd/yyyy HH:mm",
+            Locale.getDefault()
+        )
+
+    val parsedDate =
+        formatter.parse(
+            "$selectedDate $dueHour:$dueMinute"
+        )
+
+    FirebaseFirestore.getInstance()
+        .collection("assignments")
+        .document(assignmentId)
+        .update(
+            mapOf(
+                "title" to title,
+                "description" to description,
+                "dueDate" to Timestamp(parsedDate!!)
+            )
+        )
+        .addOnSuccessListener {
+
+            uploadFilesForAssignment(
+                assignmentId = assignmentId,
+                files = selectedFiles,
+                context = context
+            ) {
+
+                Toast.makeText(
+                    context,
+                    "Assignment updated!",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                onSuccess()
+            }
+        }
 }

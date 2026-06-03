@@ -1,5 +1,7 @@
 package com.example.campusia.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -37,6 +40,8 @@ fun AssignmentDetailsScreen(
 ) {
 
     val db = FirebaseFirestore.getInstance()
+
+    val context = LocalContext.current
 
     var assignment by remember {
         mutableStateOf<Assignment?>(null)
@@ -222,12 +227,70 @@ fun AssignmentDetailsScreen(
             }
 
             item {
-                UploadMaterialsCard(
-                    onClick = {
 
-                        // TODO upload file
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            1.dp,
+                            FieldBorder,
+                            RoundedCornerShape(24.dp)
+                        ),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = FieldBackground
+                    )
+                ) {
+
+                    Column(
+                        modifier = Modifier.padding(20.dp)
+                    ) {
+
+                        Text(
+                            "Uploaded Files",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(18.dp)
+                        )
+
+                        if (assignment?.materials.isNullOrEmpty()) {
+
+                            Text(
+                                text = "No files uploaded yet.",
+                                color = TextMuted
+                            )
+
+                        } else {
+
+                            assignment?.materials?.forEach { material ->
+
+                                UploadMaterialsCard(
+                                    title = material.fileName,
+                                    subtitle = "Tap to open file",
+                                    onClick = {
+
+                                        val intent = Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(
+                                                material.downloadUrl
+                                            )
+                                        )
+
+                                        context.startActivity(intent)
+                                    }
+                                )
+
+                                Spacer(
+                                    modifier = Modifier.height(12.dp)
+                                )
+                            }
+                        }
                     }
-                )
+                }
             }
         }
     }

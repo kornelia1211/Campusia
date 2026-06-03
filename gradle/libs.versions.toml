@@ -17,6 +17,7 @@ firebaseFirestoreKtx = "26.1.2"
 foundation = "1.10.5"
 uiText = "1.11.2"
 uiGraphics = "1.11.2"
+firebaseFirestoreKtxVersion = "26.3.0"
 
 
 [libraries]
@@ -46,6 +47,7 @@ firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-fires
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
+google-firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtxVersion" }
 
 
 [plugins]
