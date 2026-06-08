@@ -12,6 +12,7 @@ import com.example.campusia.screens.LoginScreen
 import com.example.campusia.screens.MyCoursesScreen
 import com.example.campusia.screens.RegisterScreen
 import com.example.campusia.screens.CourseDetailsScreen
+import com.example.campusia.screens.DepartmentsScreen
 import com.example.campusia.screens.ScheduleScreen
 import com.google.firebase.auth.FirebaseAuth
 
@@ -116,6 +117,11 @@ fun Navigation(auth: FirebaseAuth) {
                 )
             }
         }
+
+        composable("departments_screen"){
+            DepartmentsScreen(navController = navController)
+        }
+
     }
 
 }
