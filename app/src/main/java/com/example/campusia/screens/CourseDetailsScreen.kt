@@ -393,6 +393,8 @@ fun CourseDetailsScreen(
                 }
             }
         }
+
+        //toDo: Add lecturers in this course
     }
 
     studentToRemove?.let { student ->

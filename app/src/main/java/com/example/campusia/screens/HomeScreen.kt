@@ -172,9 +172,9 @@ fun HomeScreen(
 
                         Text(
                             text = when (role) {
-                                UserRole.LECTURER -> "Manage your courses and engage with students."
+                                UserRole.LECTURER -> "Manage your courses and engage with students"
                                 UserRole.STUDENT -> "Ready to continue your learning journey?"
-                                UserRole.ADMIN -> "Manage your university platform analytics."
+                                UserRole.ADMIN -> "Manage your university platform analytics"
                             },
                             fontSize = 15.sp,
                             color = Color.White
@@ -298,6 +298,28 @@ fun HomeScreen(
                                     value = "4",
                                     icon = Icons.Default.HomeWork
                                     )
+                            }
+                        }
+                    }
+
+                    item{ Spacer(modifier = Modifier.height(15.dp)) }
+
+
+                    item {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Quick Actions",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Button(
+                                onClick = { navController.navigate("departments_screen") },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Manage Departments")
                             }
                         }
                     }

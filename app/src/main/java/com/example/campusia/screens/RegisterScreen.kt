@@ -40,6 +40,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,7 +67,7 @@ import androidx.navigation.NavHostController
 import com.example.campusia.SessionManager
 import com.example.campusia.components.PasswordRequirementText
 import com.example.campusia.components.StudentHatIcon
-import com.example.campusia.entities.Departments
+import com.example.campusia.entities.Department
 import com.example.campusia.entities.PasswordRequirement
 import com.example.campusia.entities.User
 import com.example.campusia.entities.mapRole
@@ -104,7 +105,21 @@ fun RegisterScreen(
     var isPasswordConformationVisible by remember { mutableStateOf(false) }
 
     val roles = listOf("Student", "Lecturer")
-    val departments =  remember { Departments.entries.map { it.displayName } }
+
+    var departments by remember {
+        mutableStateOf<List<Department>>(emptyList())
+    }
+
+    LaunchedEffect(Unit) {
+        FirebaseFirestore.getInstance()
+            .collection("departments")
+            .get()
+            .addOnSuccessListener { result ->
+                departments = result.documents.mapNotNull {
+                    it.toObject(Department::class.java)
+                }
+            }
+    }
 
 
     RegisterCardContainer {
@@ -279,7 +294,7 @@ fun RegisterScreen(
 
         RegisterDropdownField(
             selectedValue = department,
-            items = departments,
+            items = departments.map{ it.name },
             placeholder = "Choose department",
             onItemSelected = { department = it }
         )
