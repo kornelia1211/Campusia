@@ -67,7 +67,7 @@ import com.example.campusia.entities.Course
 import com.example.campusia.entities.CourseFrequency
 import com.example.campusia.entities.CourseSchedule
 import com.example.campusia.entities.CourseType
-import com.example.campusia.entities.Departments
+import com.example.campusia.entities.Department
 import com.example.campusia.entities.User
 import com.example.campusia.entities.UserRole
 import com.example.campusia.ui.theme.CampusiaTheme
@@ -132,6 +132,14 @@ fun CourseCreationScreen(
         mutableStateOf<List<User>>(emptyList())
     }
 
+    var departments by remember {
+        mutableStateOf<List<Department>>(emptyList())
+    }
+
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+
+    val currentUserRole = SessionManager.userRole
+
     LaunchedEffect(Unit) {
         FirebaseFirestore.getInstance()
             .collection("users")
@@ -139,6 +147,17 @@ fun CourseCreationScreen(
             .addOnSuccessListener { result ->
                 users = result.documents.mapNotNull {
                     it.toObject(User::class.java)
+                }
+            }
+    }
+
+    LaunchedEffect(Unit) {
+        FirebaseFirestore.getInstance()
+            .collection("departments")
+            .get()
+            .addOnSuccessListener { result ->
+                departments = result.documents.mapNotNull {
+                    it.toObject(Department::class.java)
                 }
             }
     }
@@ -151,10 +170,14 @@ fun CourseCreationScreen(
         mutableStateOf<List<User>>(emptyList())
     }
 
-    var selectedDepartment by remember(courseToEdit) {
+    var lecturersInitialized by remember {
+        mutableStateOf(false)
+    }
+
+    var selectedDepartment by remember(courseToEdit, departments) {
         mutableStateOf(
-            Departments.entries.firstOrNull {
-                it.displayName == courseToEdit?.department
+            departments.firstOrNull {
+                it.name == courseToEdit?.department
             }
         )
     }
@@ -239,6 +262,22 @@ fun CourseCreationScreen(
         }
     }
 
+    LaunchedEffect(courseToEdit, users) {
+        if (
+            !lecturersInitialized &&
+            courseToEdit != null &&
+            users.isNotEmpty()
+        ) {
+            val course = courseToEdit ?: return@LaunchedEffect
+
+            selectedLecturers = users.filter {
+                it.userId in course.lecturerIds && it.userId != currentUserId
+            }
+
+            lecturersInitialized = true
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -284,12 +323,12 @@ fun CourseCreationScreen(
             LabeledField(label = "Department", icon = Icons.Outlined.Apartment)
 
             DropdownSelector(
-                selectedValue = selectedDepartment?.displayName ?: "",
+                selectedValue = selectedDepartment?.name ?: "",
                 placeholder = "Select department",
-                items = Departments.entries.map { it.displayName },
+                items = departments.map { it.name },
                 onItemSelected = { chosen ->
                     selectedDepartment =
-                        Departments.entries.firstOrNull { it.displayName == chosen }
+                        departments.firstOrNull() { it.name == chosen }
                 }
             )
 
@@ -392,12 +431,12 @@ fun CourseCreationScreen(
             )
         }
 
-        val filteredLecturers = remember(users, searchQuery) {
+        val filteredLecturers = remember(users, searchQuery, currentUserRole) {
             users.filter { user ->
-                user.role == "Lecturer" && (
-                        user.firstName.contains(searchQuery, ignoreCase = true) ||
-                                user.lastName.contains(searchQuery, ignoreCase = true)
-                        )
+                user.role == "Lecturer" &&
+                        (currentUserRole == UserRole.ADMIN || user.userId != currentUserId) &&
+                        (user.firstName.contains(searchQuery, ignoreCase = true) ||
+                                user.lastName.contains(searchQuery, ignoreCase = true))
             }
         }
 
@@ -574,7 +613,7 @@ fun CourseCreationScreen(
                     createCourse(
                         title = title,
                         description = description,
-                        department = selectedDepartment!!.displayName,
+                        department = selectedDepartment!!.name,
                         schedule = scheduleObject,
                         maxStudents = maxStudentsInt,
                         providedLecturerIds = lecturersList,
@@ -590,7 +629,7 @@ fun CourseCreationScreen(
                         courseId = editingCourse.courseId,
                         title = title,
                         description = description,
-                        department = selectedDepartment!!.displayName,
+                        department = selectedDepartment!!.name,
                         schedule = scheduleObject,
                         maxStudents = maxStudentsInt,
                         lecturerIds = lecturersList,
