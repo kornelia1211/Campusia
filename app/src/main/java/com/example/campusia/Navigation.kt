@@ -7,12 +7,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.campusia.screens.AssignmentCreationScreen
 import com.example.campusia.screens.AssignmentDetailsScreen
 import com.example.campusia.screens.CourseCreationScreen
+import com.example.campusia.screens.CourseDetailsScreen
+import com.example.campusia.screens.DepartmentsScreen
 import com.example.campusia.screens.HomeScreen
 import com.example.campusia.screens.LoginScreen
 import com.example.campusia.screens.MyCoursesScreen
+import com.example.campusia.screens.ProfileScreen
 import com.example.campusia.screens.RegisterScreen
-import com.example.campusia.screens.CourseDetailsScreen
-import com.example.campusia.screens.DepartmentsScreen
 import com.example.campusia.screens.ScheduleScreen
 import com.google.firebase.auth.FirebaseAuth
 
@@ -23,19 +24,23 @@ fun Navigation(auth: FirebaseAuth) {
     NavHost(
         navController = navController,
         startDestination = "login_screen"
-    ){
+    ) {
         composable("login_screen") {
             LoginScreen(navController, auth)
         }
+
         composable("register_screen") {
             RegisterScreen(navController, auth)
         }
+
         composable("home_screen") {
             HomeScreen(navController)
         }
-        composable("courses_screen"){
+
+        composable("courses_screen") {
             MyCoursesScreen(navController)
         }
+
         composable("course_creation") {
             CourseCreationScreen(navController)
         }
@@ -55,28 +60,33 @@ fun Navigation(auth: FirebaseAuth) {
 
         composable(
             route = "course_detail/{courseId}"
-        ){
-            backStackEntry ->
-            val courseId = backStackEntry.arguments?.getString("courseId")
+        ) { backStackEntry ->
 
-            if (courseId != null){
+            val courseId =
+                backStackEntry.arguments?.getString("courseId")
+
+            if (courseId != null) {
                 CourseDetailsScreen(
                     navController = navController,
                     courseId = courseId
                 )
             }
-
         }
 
         composable("schedule_screen") {
             ScheduleScreen(navController)
         }
 
-        composable("assignment_creation_screen/{courseId}"){
-            backStackEntry ->
-                val courseId = backStackEntry.arguments?.getString("courseId")
+        composable("profile_screen") {
+            ProfileScreen(navController)
+        }
 
-            if (courseId != null){
+        composable("assignment_creation_screen/{courseId}") { backStackEntry ->
+
+            val courseId =
+                backStackEntry.arguments?.getString("courseId")
+
+            if (courseId != null) {
                 AssignmentCreationScreen(
                     navController = navController,
                     courseId = courseId
@@ -85,7 +95,7 @@ fun Navigation(auth: FirebaseAuth) {
         }
 
         composable(
-            "edit_assignment/{assignmentId}/{courseId}"
+            route = "edit_assignment/{assignmentId}/{courseId}"
         ) { backStackEntry ->
 
             AssignmentCreationScreen(
@@ -102,7 +112,7 @@ fun Navigation(auth: FirebaseAuth) {
         }
 
         composable(
-            "assignment_details/{assignmentId}"
+            route = "assignment_details/{assignmentId}"
         ) { backStackEntry ->
 
             val assignmentId =
@@ -110,7 +120,6 @@ fun Navigation(auth: FirebaseAuth) {
                     ?.getString("assignmentId")
 
             if (assignmentId != null) {
-
                 AssignmentDetailsScreen(
                     navController = navController,
                     assignmentId = assignmentId
@@ -118,10 +127,8 @@ fun Navigation(auth: FirebaseAuth) {
             }
         }
 
-        composable("departments_screen"){
+        composable("departments_screen") {
             DepartmentsScreen(navController = navController)
         }
-
     }
-
 }

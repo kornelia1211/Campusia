@@ -15,11 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.outlined.Assignment
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Surface
@@ -107,20 +107,6 @@ fun BottomNavBar(
 
                 BottomNavItem(
                     modifier = Modifier.weight(1f),
-                    label = "Assignments",
-                    selected = selectedItem == "assignments",
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Assignment,
-                            contentDescription = "Assignments",
-                            modifier = Modifier.size(22.dp)
-                        )
-                    },
-                    onClick = { }
-                )
-
-                BottomNavItem(
-                    modifier = Modifier.weight(1f),
                     label = "Chat",
                     selected = selectedItem == "chat",
                     icon = {
@@ -160,10 +146,30 @@ fun BottomNavBar(
                             )
                         },
                         onClick = {
-                            navController.navigate("schedule_screen")
+                            navController.navigate("schedule_screen") {
+                                launchSingleTop = true
+                            }
                         }
                     )
                 }
+
+                BottomNavItem(
+                    modifier = Modifier.weight(1f),
+                    label = "Profile",
+                    selected = selectedItem == "profile",
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Person,
+                            contentDescription = "Profile",
+                            modifier = Modifier.size(22.dp)
+                        )
+                    },
+                    onClick = {
+                        navController.navigate("profile_screen") {
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
 
             Box(
