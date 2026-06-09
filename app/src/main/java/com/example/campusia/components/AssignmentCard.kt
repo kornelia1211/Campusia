@@ -6,11 +6,17 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.campusia.entities.Assignment
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -22,6 +28,35 @@ fun AssignmentCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
+    val currentUserId = auth.currentUser?.uid ?: ""
+
+    var userRole by remember {
+        mutableStateOf("")
+    }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotBlank()) {
+            db.collection("users")
+                .document(currentUserId)
+                .get()
+                .addOnSuccessListener { document ->
+                    userRole = document.getString("role") ?: ""
+                }
+                .addOnFailureListener {
+                    userRole = ""
+                }
+        }
+    }
+
+    val normalizedRole = userRole.trim().lowercase()
+
+    val canEditOrDelete =
+        normalizedRole == "lecturer" ||
+                normalizedRole == "admin"
 
     val formattedDate = remember(
         assignment.dueDate
@@ -62,40 +97,43 @@ fun AssignmentCard(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            Spacer(
-                modifier = Modifier.height(12.dp)
-            )
+            if (canEditOrDelete) {
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    Arrangement.End,
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
 
-                IconButton(
-                    onClick = onEdit
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement =
+                        Arrangement.End,
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
 
-                    Icon(
-                        imageVector =
-                            Icons.Outlined.Edit,
-                        contentDescription =
-                            "Edit assignment"
-                    )
-                }
+                    IconButton(
+                        onClick = onEdit
+                    ) {
 
-                IconButton(
-                    onClick = onDelete
-                ) {
+                        Icon(
+                            imageVector =
+                                Icons.Outlined.Edit,
+                            contentDescription =
+                                "Edit assignment"
+                        )
+                    }
 
-                    Icon(
-                        imageVector =
-                            Icons.Outlined.Delete,
-                        contentDescription =
-                            "Delete assignment"
-                    )
+                    IconButton(
+                        onClick = onDelete
+                    ) {
+
+                        Icon(
+                            imageVector =
+                                Icons.Outlined.Delete,
+                            contentDescription =
+                                "Delete assignment"
+                        )
+                    }
                 }
             }
         }

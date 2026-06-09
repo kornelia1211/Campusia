@@ -12,7 +12,6 @@ import com.example.campusia.screens.DepartmentsScreen
 import com.example.campusia.screens.HomeScreen
 import com.example.campusia.screens.LoginScreen
 import com.example.campusia.screens.MyCoursesScreen
-import com.example.campusia.screens.ProfileScreen
 import com.example.campusia.screens.RegisterScreen
 import com.example.campusia.screens.ScheduleScreen
 import com.google.firebase.auth.FirebaseAuth
@@ -77,11 +76,9 @@ fun Navigation(auth: FirebaseAuth) {
             ScheduleScreen(navController)
         }
 
-        composable("profile_screen") {
-            ProfileScreen(navController)
-        }
-
-        composable("assignment_creation_screen/{courseId}") { backStackEntry ->
+        composable(
+            route = "assignment_creation_screen/{courseId}"
+        ) { backStackEntry ->
 
             val courseId =
                 backStackEntry.arguments?.getString("courseId")
@@ -98,16 +95,16 @@ fun Navigation(auth: FirebaseAuth) {
             route = "edit_assignment/{assignmentId}/{courseId}"
         ) { backStackEntry ->
 
+            val assignmentId =
+                backStackEntry.arguments?.getString("assignmentId")
+
+            val courseId =
+                backStackEntry.arguments?.getString("courseId") ?: ""
+
             AssignmentCreationScreen(
                 navController = navController,
-                courseId =
-                    backStackEntry.arguments
-                        ?.getString("courseId")
-                        ?: "",
-
-                assignmentId =
-                    backStackEntry.arguments
-                        ?.getString("assignmentId")
+                courseId = courseId,
+                assignmentId = assignmentId
             )
         }
 
@@ -116,8 +113,7 @@ fun Navigation(auth: FirebaseAuth) {
         ) { backStackEntry ->
 
             val assignmentId =
-                backStackEntry.arguments
-                    ?.getString("assignmentId")
+                backStackEntry.arguments?.getString("assignmentId")
 
             if (assignmentId != null) {
                 AssignmentDetailsScreen(
