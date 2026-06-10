@@ -54,12 +54,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.campusia.SessionManager
 import com.example.campusia.components.AlertDialogDelete
 import com.example.campusia.components.AssignmentCard
 import com.example.campusia.components.RoundedButton
 import com.example.campusia.entities.Assignment
 import com.example.campusia.entities.Course
 import com.example.campusia.entities.User
+import com.example.campusia.entities.UserRole
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.campusia.ui.theme.ScreenBackground
@@ -94,6 +96,8 @@ fun CourseDetailsScreen(
     var studentToRemove by remember {
         mutableStateOf<User?>(null)
     }
+
+    val role = SessionManager.userRole
 
     LaunchedEffect(Unit) {
         db.collection("courses")
@@ -152,28 +156,36 @@ fun CourseDetailsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                RoundedButton(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Add,
-                    text = "Assignment",
-                    height = 40.dp,
-                    fontSize = 13.sp,
-                    iconSize = 17.dp,
-                    contentPadding = PaddingValues(horizontal = 4.dp),
-                    onClick = {
-                        navController.navigate("assignment_creation_screen/$courseId")
-                    }
-                )
-                RoundedButton(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Campaign,
-                    text = "Announce",
-                    height = 40.dp,
-                    fontSize = 13.sp,
-                    iconSize = 17.dp,
-                    contentPadding = PaddingValues(horizontal = 4.dp),
-                    onClick = { Toast.makeText(context, "Announcement Clicked", Toast.LENGTH_SHORT).show() }
-                )
+                if (role == UserRole.LECTURER || role == UserRole.ADMIN){
+                    RoundedButton(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Add,
+                        text = "Assignment",
+                        height = 40.dp,
+                        fontSize = 13.sp,
+                        iconSize = 17.dp,
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        onClick = {
+                            navController.navigate("assignment_creation_screen/$courseId")
+                        }
+                    )
+                    RoundedButton(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Campaign,
+                        text = "Announce",
+                        height = 40.dp,
+                        fontSize = 13.sp,
+                        iconSize = 17.dp,
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        onClick = {
+                            Toast.makeText(
+                                context,
+                                "Announcement Clicked",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
+                }
             }
         }
 

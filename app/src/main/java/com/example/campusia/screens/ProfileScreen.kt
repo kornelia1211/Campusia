@@ -275,7 +275,7 @@ private fun ProfileTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "UniCourse",
+            text = "Campusia",
             color = PrimaryPurple,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
