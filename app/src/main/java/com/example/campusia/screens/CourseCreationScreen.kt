@@ -839,13 +839,31 @@ fun updateCourse(
 ) {
     val db = FirebaseFirestore.getInstance()
 
+    val auth = FirebaseAuth.getInstance()
+    val currentUserId = auth.currentUser?.uid ?: return
+    val currentUserRole = SessionManager.userRole
+    val finalLecturerIds = if (currentUserRole == UserRole.LECTURER) {
+        (lecturerIds + currentUserId).distinct()
+    } else {
+        lecturerIds.distinct()
+    }
+
+    if (finalLecturerIds.isEmpty()) {
+        Toast.makeText(
+            context,
+            "Please select at least one lecturer",
+            Toast.LENGTH_SHORT
+        ).show()
+        return
+    }
+
     val updatedCourse = Course(
         courseId = courseId,
         title = title,
         description = description,
         department = department,
         maxStudents = maxStudents,
-        lecturerIds = lecturerIds,
+        lecturerIds = finalLecturerIds,
         studentIds = studentIds,
         enrolledStudents = enrolledStudents,
         schedule = schedule
