@@ -2,6 +2,8 @@ package com.example.campusia.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,8 +13,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -20,7 +25,11 @@ import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.HomeWork
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.SupervisorAccount
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Apartment
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,10 +39,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,18 +53,20 @@ import androidx.navigation.NavHostController
 import com.example.campusia.SessionManager
 import com.example.campusia.components.BottomNavBar
 import com.example.campusia.components.CourseCard
-import com.example.campusia.entities.UserRole
-import com.example.campusia.ui.theme.PrimaryPurple
-import com.example.campusia.ui.theme.ScreenBackground
 import com.example.campusia.components.MetricCard
 import com.example.campusia.entities.Course
+import com.example.campusia.entities.UserRole
+import com.example.campusia.ui.theme.FieldBorder
+import com.example.campusia.ui.theme.PrimaryPurple
 import com.example.campusia.ui.theme.PrimaryPurpleDark
+import com.example.campusia.ui.theme.ScreenBackground
+import com.example.campusia.ui.theme.TextDark
+import com.example.campusia.ui.theme.TextMuted
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 
-// TODO: change hardcoded values to real ones
 @Composable
 fun HomeScreen(
     navController: NavHostController
@@ -73,8 +86,10 @@ fun HomeScreen(
 
     LaunchedEffect(user?.uid) {
         val currentUid = user?.uid
+
         if (currentUid != null) {
-            db.collection("users").document(currentUid)
+            db.collection("users")
+                .document(currentUid)
                 .get()
                 .addOnSuccessListener { documentSnapshot ->
                     if (documentSnapshot.exists()) {
@@ -132,6 +147,7 @@ fun HomeScreen(
     }
 
     Scaffold(
+        containerColor = ScreenBackground,
         bottomBar = {
             BottomNavBar(
                 navController = navController,
@@ -144,8 +160,8 @@ fun HomeScreen(
                 .fillMaxSize()
                 .background(ScreenBackground)
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
                 Box(
@@ -159,16 +175,23 @@ fun HomeScreen(
                                     PrimaryPurpleDark
                                 )
                             )
-                    )
+                        )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(
+                        modifier = Modifier.padding(18.dp)
+                    ) {
                         Text(
-                            text = "Welcome back, $username",
+                            text = if (username.isBlank()) {
+                                "Welcome back"
+                            } else {
+                                "Welcome back, $username"
+                            },
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
                             color = Color.White
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = when (role) {
@@ -183,11 +206,9 @@ fun HomeScreen(
                 }
             }
 
-            item{ Spacer(modifier = Modifier.height(15.dp)) }
-
-            when (role) {
-                UserRole.LECTURER -> {
-                    item {
+            item {
+                when (role) {
+                    UserRole.LECTURER -> {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -198,12 +219,14 @@ fun HomeScreen(
                                 value = "${courses.size}",
                                 icon = Icons.AutoMirrored.Filled.MenuBook
                             )
+
                             MetricCard(
                                 modifier = Modifier.weight(1f),
                                 label = "Students",
                                 value = "205",
                                 icon = Icons.Default.People
                             )
+
                             MetricCard(
                                 modifier = Modifier.weight(1f),
                                 label = "To check",
@@ -213,31 +236,7 @@ fun HomeScreen(
                         }
                     }
 
-                    item{ Spacer(modifier = Modifier.height(15.dp)) }
-
-                    item {
-                        Text(
-                            text = "Quick Actions",
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = { navController.navigate("course_creation") },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Create New Course")
-                            }
-                        }
-                    }
-                }
-
-                UserRole.STUDENT -> {
-                    item {
+                    UserRole.STUDENT -> {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -257,11 +256,8 @@ fun HomeScreen(
                             )
                         }
                     }
-                }
 
-
-                UserRole.ADMIN -> {
-                    item {
+                    UserRole.ADMIN -> {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
@@ -280,69 +276,163 @@ fun HomeScreen(
                                     modifier = Modifier.weight(1f),
                                     label = "Total Students",
                                     value = "242",
-                                    icon = Icons.Default.People)
+                                    icon = Icons.Default.People
+                                )
                             }
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                                 MetricCard(
                                     modifier = Modifier.weight(1f),
                                     label = "Active Lecturers",
                                     value = "12",
                                     icon = Icons.Default.SupervisorAccount
-                                    )
+                                )
 
                                 MetricCard(
                                     modifier = Modifier.weight(1f),
                                     label = "Departments",
                                     value = "4",
                                     icon = Icons.Default.HomeWork
-                                    )
-                            }
-                        }
-                    }
-
-                    item{ Spacer(modifier = Modifier.height(15.dp)) }
-
-
-                    item {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Quick Actions",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                            Button(
-                                onClick = { navController.navigate("departments_screen") },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Manage Departments")
+                                )
                             }
                         }
                     }
                 }
             }
 
-            item{ Spacer(modifier = Modifier.height(15.dp)) }
+            if (role != UserRole.STUDENT) {
+                item {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        SectionTitle(text = "Quick Actions")
 
-            if (courses.isNotEmpty()){
-                item { Text (
-                    text = "Your courses",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp)}
-            }
-            items(courses.take(3)) { course ->
-                CourseCard(
-                    course = course,
-                    role = role,
-                    onClick = {
-                        navController.navigate(
-                            "course_detail/${course.courseId}"
-                        )
+                        when (role) {
+                            UserRole.LECTURER -> {
+                                QuickActionCard(
+                                    title = "Create New Course",
+                                    subtitle = "Add a new course to your teaching list",
+                                    icon = Icons.Outlined.Add,
+                                    onClick = { navController.navigate("course_creation") }
+                                )
+                            }
+
+                            UserRole.ADMIN -> {
+                                QuickActionCard(
+                                    title = "Manage Departments",
+                                    subtitle = "Create and organize university departments",
+                                    icon = Icons.Outlined.Apartment,
+                                    onClick = { navController.navigate("departments_screen") }
+                                )
+                            }
+
+                            UserRole.STUDENT -> Unit
+                        }
                     }
+                }
+            }
+
+            if (courses.isNotEmpty()) {
+                item {
+                    SectionTitle(text = "Your courses")
+                }
+
+                items(courses.take(3)) { course ->
+                    CourseCard(
+                        course = course,
+                        role = role,
+                        onClick = {
+                            navController.navigate(
+                                "course_detail/${course.courseId}"
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(
+    text: String
+) {
+    Text(
+        text = text,
+        color = TextDark,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp
+    )
+}
+
+@Composable
+private fun QuickActionCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .background(
+                        color = ScreenBackground,
+                        shape = CircleShape
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = FieldBorder,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = PrimaryPurple,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    color = TextDark,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = subtitle,
+                    color = TextMuted,
+                    fontSize = 13.sp
                 )
             }
         }

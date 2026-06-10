@@ -284,17 +284,6 @@ private fun ProfileTopBar(
         Spacer(modifier = Modifier.weight(1f))
 
         IconButton(
-            onClick = { }
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Person,
-                contentDescription = "Profile",
-                tint = TextDark,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-
-        IconButton(
             onClick = {
                 auth.signOut()
                 navController.navigate("login_screen") {
