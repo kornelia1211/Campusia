@@ -12,6 +12,7 @@ import com.example.campusia.screens.DepartmentsScreen
 import com.example.campusia.screens.HomeScreen
 import com.example.campusia.screens.LoginScreen
 import com.example.campusia.screens.MyCoursesScreen
+import com.example.campusia.screens.ProfileScreen
 import com.example.campusia.screens.RegisterScreen
 import com.example.campusia.screens.ScheduleScreen
 import com.google.firebase.auth.FirebaseAuth
@@ -74,6 +75,10 @@ fun Navigation(auth: FirebaseAuth) {
 
         composable("schedule_screen") {
             ScheduleScreen(navController)
+        }
+
+        composable("profile_screen") {
+            ProfileScreen(navController)
         }
 
         composable(
