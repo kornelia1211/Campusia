@@ -6,6 +6,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.campusia.screens.AssignmentCreationScreen
 import com.example.campusia.screens.AssignmentDetailsScreen
+import com.example.campusia.screens.ChatListScreen
+import com.example.campusia.screens.ChatScreen
 import com.example.campusia.screens.CourseCreationScreen
 import com.example.campusia.screens.CourseDetailsScreen
 import com.example.campusia.screens.DepartmentsScreen
@@ -131,5 +133,19 @@ fun Navigation(auth: FirebaseAuth) {
         composable("departments_screen") {
             DepartmentsScreen(navController = navController)
         }
+
+        composable("chatList_screen") {
+            ChatListScreen(navController = navController)
+        }
+
+        composable("chat/{chatRoomId}/{chatTitle}"){ backStackEntry ->
+            val chatRoomId = backStackEntry.arguments?.getString("chatRoomId")
+            val chatTitle = backStackEntry.arguments?.getString("chatTitle")
+
+            if (chatRoomId != null && chatTitle != null) {
+                ChatScreen(navController = navController, chatRoomId, chatTitle)
+            }
+        }
+
     }
 }

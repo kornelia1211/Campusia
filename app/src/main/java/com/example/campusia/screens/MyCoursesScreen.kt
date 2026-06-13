@@ -52,6 +52,7 @@ import com.example.campusia.components.CourseCard
 import com.example.campusia.entities.Course
 import com.example.campusia.entities.UserRole
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
@@ -366,6 +367,8 @@ fun enrollToCourse(
         )
     )
         .addOnSuccessListener {
+            db.collection("chat_rooms").document(course.courseId)
+                .update("participants", FieldValue.arrayUnion(userId))
             Toast.makeText(context, "Enrolled!", Toast.LENGTH_SHORT).show()
         }
         .addOnFailureListener {

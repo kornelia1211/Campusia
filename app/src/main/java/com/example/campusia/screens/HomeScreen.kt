@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.HomeWork
 import androidx.compose.material.icons.filled.People
@@ -217,7 +217,7 @@ fun HomeScreen(
                                 modifier = Modifier.weight(1f),
                                 label = "Courses",
                                 value = "${courses.size}",
-                                icon = Icons.AutoMirrored.Filled.MenuBook
+                                icon = Icons.Filled.MenuBook
                             )
 
                             MetricCard(
@@ -245,7 +245,7 @@ fun HomeScreen(
                                 modifier = Modifier.weight(1f),
                                 label = "My Courses",
                                 value = "${courses.size}",
-                                icon = Icons.AutoMirrored.Filled.MenuBook
+                                icon = Icons.Filled.MenuBook
                             )
 
                             MetricCard(
@@ -269,7 +269,7 @@ fun HomeScreen(
                                     modifier = Modifier.weight(1f),
                                     label = "Total Courses",
                                     value = "${courses.size}",
-                                    icon = Icons.AutoMirrored.Filled.MenuBook
+                                    icon = Icons.Filled.MenuBook
                                 )
 
                                 MetricCard(

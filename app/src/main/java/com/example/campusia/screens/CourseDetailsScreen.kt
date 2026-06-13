@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Business
@@ -420,8 +421,14 @@ fun CourseDetailsScreen(
                     "studentIds", FieldValue.arrayRemove(student.userId),
                     "enrolledStudents", FieldValue.increment(-1)
                 ).addOnSuccessListener {
-                    Toast.makeText(context, "Student removed", Toast.LENGTH_SHORT).show()
-                    studentToRemove = null
+                    db.collection("chat_rooms").document(courseId)
+                        .update("participants", FieldValue.arrayRemove(student.userId))
+                        .addOnSuccessListener {
+                            Toast.makeText(context, "Student removed from course and chat", Toast.LENGTH_SHORT).show()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(context, "Student removed from course list", Toast.LENGTH_SHORT).show()
+                        }
                 }.addOnFailureListener {
                     Toast.makeText(context, "Failed to remove student", Toast.LENGTH_SHORT).show()
                 }

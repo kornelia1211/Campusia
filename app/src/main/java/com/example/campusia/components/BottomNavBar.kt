@@ -116,7 +116,13 @@ fun BottomNavBar(
                             modifier = Modifier.size(22.dp)
                         )
                     },
-                    onClick = { }
+                    onClick = {
+                        navController.navigate("chatList_screen") {
+                            popUpTo(navController.graph.startDestinationId)
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
 
                 BottomNavItem(
