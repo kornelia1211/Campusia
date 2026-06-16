@@ -15,6 +15,7 @@ import com.example.campusia.MainActivity
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlin.random.Random
+import com.google.firebase.auth.FirebaseAuth
 
 class MessagingService : FirebaseMessagingService() {
 
@@ -29,6 +30,12 @@ class MessagingService : FirebaseMessagingService() {
     }
 
     private fun showChatNotification(message: RemoteMessage) {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        val senderId = message.data["senderId"]
+
+        if (currentUserId != null && senderId == currentUserId) {
+            return
+        }
         createNotificationChannel(this)
 
         if (

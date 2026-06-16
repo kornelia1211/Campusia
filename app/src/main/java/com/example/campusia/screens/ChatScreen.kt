@@ -61,6 +61,7 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.google.firebase.messaging.FirebaseMessaging
 
 @Composable
 fun ChatScreen(
@@ -78,6 +79,7 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
     var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
     var currentUserName by remember { mutableStateOf("User") }
+    var currentFcmToken by remember { mutableStateOf("") }
 
     LaunchedEffect(currentUser?.uid) {
         val uid = currentUser?.uid
@@ -91,6 +93,15 @@ fun ChatScreen(
                             currentUserName = "$first $last".trim()
                         }
                     }
+                }
+        }
+    }
+
+    LaunchedEffect(currentUser?.uid) {
+        if (currentUser?.uid != null) {
+            FirebaseMessaging.getInstance().token
+                .addOnSuccessListener { token ->
+                    currentFcmToken = token
                 }
         }
     }
@@ -222,6 +233,7 @@ fun ChatScreen(
                                 val messageData = mapOf(
                                     "senderId" to currentUser.uid,
                                     "senderName" to currentUserName,
+                                    "senderFcmToken" to currentFcmToken,
                                     "text" to messageText.trim(),
                                     "timestamp" to Timestamp.now()
                                 )
