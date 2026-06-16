@@ -55,6 +55,7 @@ import com.example.campusia.ui.theme.TextMuted
 import com.example.campusia.ui.theme.TextPrimary
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.campusia.components.BottomNavBar
 
 @Composable
 fun ChatListScreen(
@@ -113,6 +114,12 @@ fun ChatListScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
+        },
+        bottomBar = {
+            BottomNavBar(
+                navController = navController,
+                selectedItem = "chat"
+            )
         }
     ){
         paddingValues ->
