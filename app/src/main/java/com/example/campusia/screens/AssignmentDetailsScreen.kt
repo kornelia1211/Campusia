@@ -70,6 +70,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.example.campusia.notifications.AssignmentDeadlineScheduler
 
 data class SubmittedAssignmentFile(
     val fileName: String = "",
@@ -176,12 +177,46 @@ fun AssignmentDetailsScreen(
         )
     }
 
-    LaunchedEffect(assignmentId) {
-        db.collection("assignments")
-            .document(assignmentId)
-            .addSnapshotListener { snapshot, _ ->
-                assignment = snapshot?.toObject(Assignment::class.java)
-            }
+    DisposableEffect(assignmentId) {
+        val assignmentListener =
+            db.collection("assignments")
+                .document(assignmentId)
+                .addSnapshotListener { snapshot, exception ->
+
+                    if (exception != null) {
+                        Toast.makeText(
+                            context,
+                            "Assignment loading error: ${exception.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        return@addSnapshotListener
+                    }
+
+                    assignment =
+                        snapshot?.toObject(Assignment::class.java)
+                }
+
+        onDispose {
+            assignmentListener.remove()
+        }
+    }
+
+    LaunchedEffect(
+        assignment,
+        normalizedUserRole
+    ) {
+        val currentAssignment = assignment
+
+        if (
+            normalizedUserRole == "student" &&
+            currentAssignment != null
+        ) {
+            AssignmentDeadlineScheduler.scheduleReminder(
+                context = context,
+                assignment = currentAssignment
+            )
+        }
     }
 
     LaunchedEffect(currentUserId) {

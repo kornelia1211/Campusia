@@ -68,6 +68,11 @@ import com.example.campusia.ui.theme.TextMuted
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import androidx.compose.material.icons.outlined.NotificationsOff
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import com.example.campusia.notifications.NotificationPreferences
 
 @Composable
 fun ProfileScreen(navController: NavHostController) {
@@ -88,6 +93,12 @@ fun ProfileScreen(navController: NavHostController) {
     var userId by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+
+    var notificationsMuted by remember {
+        mutableStateOf(
+            NotificationPreferences.areNotificationsMuted(context)
+        )
+    }
 
     LaunchedEffect(currentUserId) {
         if (currentUserId == null) {
@@ -116,6 +127,18 @@ fun ProfileScreen(navController: NavHostController) {
                 userId = document.getString("userId") ?: currentUserId
                 phoneNumber = document.getString("phoneNumber") ?: ""
                 address = document.getString("address") ?: ""
+
+                val remoteNotificationsMuted =
+                    document.getBoolean("notificationsMuted")
+
+                if (remoteNotificationsMuted != null) {
+                    notificationsMuted = remoteNotificationsMuted
+
+                    NotificationPreferences.setNotificationsMuted(
+                        context = context,
+                        muted = remoteNotificationsMuted
+                    )
+                }
 
                 isLoading = false
             }
@@ -253,7 +276,47 @@ fun ProfileScreen(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(22.dp))
 
-                    AccountSettingsCard()
+                    AccountSettingsCard(
+                        notificationsMuted = notificationsMuted,
+                        onNotificationsMutedChange = { muted ->
+
+                            notificationsMuted = muted
+
+                            NotificationPreferences.setNotificationsMuted(
+                                context = context,
+                                muted = muted
+                            )
+
+                            if (currentUserId != null) {
+                                db.collection("users")
+                                    .document(currentUserId)
+                                    .set(
+                                        mapOf(
+                                            "notificationsMuted" to muted
+                                        ),
+                                        SetOptions.merge()
+                                    )
+                                    .addOnFailureListener { exception ->
+                                        Toast.makeText(
+                                            context,
+                                            "Could not save notification settings: " +
+                                                    exception.message,
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                            }
+
+                            Toast.makeText(
+                                context,
+                                if (muted) {
+                                    "Notifications muted."
+                                } else {
+                                    "Notifications enabled."
+                                },
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
                 }
             }
         }
@@ -598,7 +661,10 @@ private fun ProfileInputField(
 }
 
 @Composable
-private fun AccountSettingsCard() {
+private fun AccountSettingsCard(
+    notificationsMuted: Boolean,
+    onNotificationsMutedChange: (Boolean) -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -621,6 +687,14 @@ private fun AccountSettingsCard() {
                 color = TextDark,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            NotificationMuteRow(
+                notificationsMuted = notificationsMuted,
+                onNotificationsMutedChange =
+                    onNotificationsMutedChange
             )
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -744,5 +818,83 @@ private fun buildInitials(
         "U"
     } else {
         initials
+    }
+}
+
+@Composable
+private fun NotificationMuteRow(
+    notificationsMuted: Boolean,
+    onNotificationsMutedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(FieldBackground)
+            .border(
+                width = 1.dp,
+                color = FieldBorder,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(
+                horizontal = 14.dp,
+                vertical = 12.dp
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector =
+                if (notificationsMuted) {
+                    Icons.Outlined.NotificationsOff
+                } else {
+                    Icons.Outlined.NotificationsActive
+                },
+            contentDescription = null,
+            tint =
+                if (notificationsMuted) {
+                    TextMuted
+                } else {
+                    PrimaryPurple
+                },
+            modifier = Modifier.size(22.dp)
+        )
+
+        Spacer(modifier = Modifier.size(12.dp))
+
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = "Mute Notifications",
+                color = TextDark,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text =
+                    if (notificationsMuted) {
+                        "Chat and assignment reminders are muted"
+                    } else {
+                        "Chat and assignment reminders are enabled"
+                    },
+                color = TextMuted,
+                fontSize = 12.sp
+            )
+        }
+
+        Switch(
+            checked = notificationsMuted,
+            onCheckedChange =
+                onNotificationsMutedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = PrimaryPurple,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = FieldBorder
+            )
+        )
     }
 }

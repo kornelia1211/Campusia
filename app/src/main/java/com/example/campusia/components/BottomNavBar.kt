@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -123,20 +122,6 @@ fun BottomNavBar(
                             restoreState = true
                         }
                     }
-                )
-
-                BottomNavItem(
-                    modifier = Modifier.weight(1f),
-                    label = "Notifications",
-                    selected = selectedItem == "notifications",
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.NotificationsNone,
-                            contentDescription = "Notifications",
-                            modifier = Modifier.size(22.dp)
-                        )
-                    },
-                    onClick = { }
                 )
 
                 if (SessionManager.userRole != UserRole.ADMIN) {

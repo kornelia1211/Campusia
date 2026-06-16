@@ -30,6 +30,13 @@ class MessagingService : FirebaseMessagingService() {
     }
 
     private fun showChatNotification(message: RemoteMessage) {
+
+        if (
+            NotificationPreferences.areNotificationsMuted(this)
+        ) {
+            return
+        }
+
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
         val senderId = message.data["senderId"]
 

@@ -16,22 +16,28 @@ fun NotificationPermissionEffect() {
 
     LaunchedEffect(Unit) {
         MessagingService.createNotificationChannel(context)
+        AssignmentDeadlineWorker.createNotificationChannel(context)
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val permissionLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission(),
-            onResult = { }
-        )
+        val permissionLauncher =
+            rememberLauncherForActivityResult(
+                contract =
+                    ActivityResultContracts.RequestPermission(),
+                onResult = { }
+            )
 
         LaunchedEffect(Unit) {
-            val hasPermission = ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
+            val hasPermission =
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
 
             if (!hasPermission) {
-                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                permissionLauncher.launch(
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
             }
         }
     }
