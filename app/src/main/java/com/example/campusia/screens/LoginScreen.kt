@@ -68,6 +68,7 @@ import com.example.campusia.ui.theme.TextDark
 import com.example.campusia.ui.theme.TextMuted
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.campusia.notifications.FcmTokenManager
 
 private val AuthPageGradient = Brush.linearGradient(
     colors = listOf(
@@ -486,6 +487,7 @@ fun signIn(
                     try {
                         val roleString = document.getString("role") ?: "Student"
                         SessionManager.userRole = mapRole(roleString)
+                        FcmTokenManager.saveCurrentTokenForLoggedUser()
                     } catch (e: Exception) {
                         Toast.makeText(
                             context,

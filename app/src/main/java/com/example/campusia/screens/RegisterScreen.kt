@@ -79,6 +79,7 @@ import com.example.campusia.ui.theme.TextDark
 import com.example.campusia.ui.theme.TextMuted
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.campusia.notifications.FcmTokenManager
 
 private val RegisterPageGradient = Brush.linearGradient(
     colors = listOf(
@@ -833,6 +834,7 @@ fun register(
                         .set(user)
                         .addOnSuccessListener {
                             SessionManager.userRole = mapRole(role) //update the role in session manager
+                            FcmTokenManager.saveCurrentTokenForLoggedUser()
                             Toast.makeText(
                                 context,
                                 "Successfully registered!",

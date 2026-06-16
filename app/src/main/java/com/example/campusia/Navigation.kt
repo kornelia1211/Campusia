@@ -18,10 +18,12 @@ import com.example.campusia.screens.ProfileScreen
 import com.example.campusia.screens.RegisterScreen
 import com.example.campusia.screens.ScheduleScreen
 import com.google.firebase.auth.FirebaseAuth
+import com.example.campusia.notifications.NotificationPermissionEffect
 
 @Composable
 fun Navigation(auth: FirebaseAuth) {
     val navController = rememberNavController()
+    NotificationPermissionEffect()
 
     NavHost(
         navController = navController,

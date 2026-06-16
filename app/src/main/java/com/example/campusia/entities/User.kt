@@ -7,5 +7,6 @@ data class User(
     val lastName: String = "",
     val email: String = "",
     val department: String = "",
-    val enrolledCourses: List<String> = emptyList()
+    val enrolledCourses: List<String> = emptyList(),
+    val fcmTokens:List<String> = emptyList()
 )
