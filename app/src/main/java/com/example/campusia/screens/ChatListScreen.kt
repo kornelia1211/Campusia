@@ -59,6 +59,7 @@ import com.example.campusia.ui.theme.TextMuted
 import com.example.campusia.ui.theme.TextPrimary
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 
 private data class ChatUserSuggestion(
     val userId: String,
@@ -71,6 +72,14 @@ private data class ChatUserSuggestion(
         get() = "$firstName $lastName".trim()
 }
 
+private data class RawChatRoom(
+    val id: String,
+    val storedTitle: String,
+    val type: String,
+    val participants: List<String>,
+    val titlesByUser: Map<String, String>
+)
+
 @Composable
 fun ChatListScreen(
     navController: NavHostController
@@ -82,7 +91,9 @@ fun ChatListScreen(
     val userRole = SessionManager.userRole
 
     var newChatTitle by remember { mutableStateOf("") }
-    var chatRooms by remember { mutableStateOf<List<ChatRoom>>(emptyList()) }
+    var rawChatRooms by remember {
+        mutableStateOf<List<RawChatRoom>>(emptyList())
+    }
 
     var availableCourses by remember { mutableStateOf<List<Course>>(emptyList()) }
     var availableUsers by remember { mutableStateOf<List<ChatUserSuggestion>>(emptyList()) }
@@ -117,6 +128,48 @@ fun ChatListScreen(
 
     var currentUserName by remember {
         mutableStateOf("Private Chat")
+    }
+
+    val chatRooms = remember(
+        rawChatRooms,
+        availableUsers,
+        currentUserId
+    ) {
+        rawChatRooms.map { room ->
+
+            val displayedTitle =
+                if (room.type == "private") {
+                    val otherUserId =
+                        room.participants.firstOrNull { participantId ->
+                            participantId != currentUserId
+                        }
+
+                    val otherUserName =
+                        availableUsers
+                            .firstOrNull { user ->
+                                user.userId == otherUserId
+                            }
+                            ?.fullName
+                            ?.takeIf { it.isNotBlank() }
+
+                    otherUserName
+                        ?: room.titlesByUser[currentUserId]
+                        ?: room.storedTitle.takeIf {
+                            it.isNotBlank()
+                        }
+                        ?: "Private Chat"
+                } else {
+                    room.storedTitle.ifBlank {
+                        "Unnamed Chat"
+                    }
+                }
+
+            ChatRoom(
+                id = room.id,
+                title = displayedTitle,
+                participants = room.participants
+            )
+        }
     }
 
     fun openCourseChat(course: Course) {
@@ -185,12 +238,7 @@ fun ChatListScreen(
                 .sorted()
                 .joinToString("_")
 
-        val roomReference =
-            db.collection("chat_rooms")
-                .document(privateRoomId)
-
         val roomData = mapOf(
-            "title" to selectedUserName,
             "type" to "private",
             "participants" to listOf(
                 currentUserId,
@@ -202,10 +250,11 @@ fun ChatListScreen(
             )
         )
 
-        roomReference
+        db.collection("chat_rooms")
+            .document(privateRoomId)
             .set(
                 roomData,
-                com.google.firebase.firestore.SetOptions.merge()
+                SetOptions.merge()
             )
             .addOnSuccessListener {
                 newChatTitle = ""
@@ -217,74 +266,89 @@ fun ChatListScreen(
             .addOnFailureListener { exception ->
                 Toast.makeText(
                     context,
-                    "Failed to open chat: " +
-                            exception.localizedMessage,
+                    "Failed to open chat: ${exception.localizedMessage}",
                     Toast.LENGTH_SHORT
                 ).show()
             }
     }
 
     DisposableEffect(currentUserId) {
-        val query = db.collection("chat_rooms")
-            .whereArrayContains("participants", currentUserId)
+        if (currentUserId.isBlank()) {
+            rawChatRooms = emptyList()
+            onDispose { }
+        } else {
+            val query = db.collection("chat_rooms")
+                .whereArrayContains(
+                    "participants",
+                    currentUserId
+                )
 
-        val liveChatsConnection = query.addSnapshotListener { snapshot, exception ->
-            if (exception != null) {
-                Toast.makeText(
-                    context,
-                    "Error loading chats: ${exception.localizedMessage}",
-                    Toast.LENGTH_SHORT
-                ).show()
-                return@addSnapshotListener
-            }
+            val liveChatsConnection =
+                query.addSnapshotListener { snapshot, exception ->
 
-            if (snapshot != null) {
-                chatRooms = snapshot.documents.mapNotNull { document ->
+                    if (exception != null) {
+                        Toast.makeText(
+                            context,
+                            "Error loading chats: ${exception.localizedMessage}",
+                            Toast.LENGTH_SHORT
+                        ).show()
 
-                    val participantsList =
-                        (document.get("participants") as? List<*>)
-                            ?.mapNotNull { participant ->
-                                participant as? String
-                            }
-                            ?: emptyList()
+                        return@addSnapshotListener
+                    }
 
-                    val roomType =
-                        document.getString("type").orEmpty()
+                    rawChatRooms =
+                        snapshot?.documents?.map { document ->
 
-                    val title =
-                        if (roomType == "private") {
+                            val participants =
+                                (document.get("participants") as? List<*>)
+                                    ?.mapNotNull { value ->
+                                        value as? String
+                                    }
+                                    ?: emptyList()
 
-                            val otherUserId =
-                                participantsList.firstOrNull { participantId ->
-                                    participantId != currentUserId
-                                }
+                            val rawTitles =
+                                document.get("titlesByUser")
+                                        as? Map<*, *>
 
-                            val otherUser =
-                                availableUsers.firstOrNull { user ->
-                                    user.userId == otherUserId
-                                }
+                            val titlesByUser =
+                                rawTitles
+                                    ?.mapNotNull { entry ->
+                                        val key =
+                                            entry.key as? String
 
-                            otherUser
-                                ?.fullName
-                                ?.takeIf { it.isNotBlank() }
-                                ?: "Private Chat"
+                                        val value =
+                                            entry.value as? String
 
-                        } else {
-                            document.getString("title")
-                                ?: "Unnamed Chat"
+                                        if (
+                                            key != null &&
+                                            value != null
+                                        ) {
+                                            key to value
+                                        } else {
+                                            null
+                                        }
+                                    }
+                                    ?.toMap()
+                                    ?: emptyMap()
+
+                            RawChatRoom(
+                                id = document.id,
+                                storedTitle =
+                                    document.getString("title")
+                                        .orEmpty(),
+                                type =
+                                    document.getString("type")
+                                        .orEmpty(),
+                                participants = participants,
+                                titlesByUser = titlesByUser
+                            )
                         }
-
-                    ChatRoom(
-                        id = document.id,
-                        title = title,
-                        participants = participantsList
-                    )
+                            ?: emptyList()
                 }
-            }
-        }
 
-        onDispose {
-            liveChatsConnection.remove()
+            onDispose {
+                liveChatsConnection.remove()
+            }
         }
     }
 
