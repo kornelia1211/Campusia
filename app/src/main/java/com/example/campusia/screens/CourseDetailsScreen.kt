@@ -75,6 +75,7 @@ import com.example.campusia.ui.theme.PrimaryPurple
 import com.example.campusia.ui.theme.TextMuted
 import com.example.campusia.ui.theme.DangerRed
 import com.google.firebase.firestore.Query
+import com.example.campusia.notifications.AssignmentDeadlineScheduler
 
 @Composable
 fun CourseDetailsScreen(
@@ -127,6 +128,15 @@ fun CourseDetailsScreen(
             .addSnapshotListener { snapshot, error ->
                 if (error == null && snapshot != null) {
                     assignments = snapshot.toObjects(Assignment::class.java)
+
+                    if (role == UserRole.STUDENT) {
+                        assignments.forEach { assignment ->
+                            AssignmentDeadlineScheduler.scheduleReminder(
+                                context = context,
+                                assignment = assignment
+                            )
+                        }
+                    }
                 }
             }
     }

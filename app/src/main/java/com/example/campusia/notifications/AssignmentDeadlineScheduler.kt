@@ -32,19 +32,26 @@ object AssignmentDeadlineScheduler {
 
         val workName = getWorkName(assignmentId)
 
-        val notificationTime =
-            dueDate.time - REMINDER_BEFORE_DEADLINE_MILLIS
+        val currentTime = System.currentTimeMillis()
+        val dueTime = dueDate.time
 
-        val delay =
-            notificationTime - System.currentTimeMillis()
-
-        if (delay <= 0L) {
+        if (dueTime <= currentTime) {
             WorkManager
                 .getInstance(context)
                 .cancelUniqueWork(workName)
 
             return
         }
+
+        val preferredNotificationTime =
+            dueTime - REMINDER_BEFORE_DEADLINE_MILLIS
+
+        val delay =
+            if (preferredNotificationTime > currentTime) {
+                preferredNotificationTime - currentTime
+            } else {
+                10_000L
+            }
 
         val formattedDueDate = SimpleDateFormat(
             "MM/dd/yyyy HH:mm",
