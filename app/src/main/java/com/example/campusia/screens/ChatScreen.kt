@@ -25,7 +25,6 @@ import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,7 +53,6 @@ import com.example.campusia.ui.theme.PrimaryPurple
 import com.example.campusia.ui.theme.PrimaryPurpleDark
 import com.example.campusia.ui.theme.ScreenBackground
 import com.example.campusia.ui.theme.TextMuted
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -62,6 +60,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.firestore.FieldValue
 
 @Composable
 fun ChatScreen(
@@ -235,7 +234,7 @@ fun ChatScreen(
                                     "senderName" to currentUserName,
                                     "senderFcmToken" to currentFcmToken,
                                     "text" to messageText.trim(),
-                                    "timestamp" to Timestamp.now()
+                                    "timestamp" to FieldValue.serverTimestamp()
                                 )
 
                                 db.collection("chat_rooms")
