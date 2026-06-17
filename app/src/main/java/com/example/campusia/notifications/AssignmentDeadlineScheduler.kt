@@ -9,6 +9,7 @@ import com.example.campusia.entities.Assignment
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import com.google.firebase.auth.FirebaseAuth
 
 object AssignmentDeadlineScheduler {
 
@@ -19,6 +20,12 @@ object AssignmentDeadlineScheduler {
         context: Context,
         assignment: Assignment
     ) {
+        val userId =
+            FirebaseAuth.getInstance()
+                .currentUser
+                ?.uid
+                ?: return
+
         val assignmentId = assignment.assignmentId
         val dueDate = assignment.dueDate?.toDate()
 
@@ -30,16 +37,45 @@ object AssignmentDeadlineScheduler {
             return
         }
 
-        val workName = getWorkName(assignmentId)
-
-        val currentTime = System.currentTimeMillis()
         val dueTime = dueDate.time
+        val currentTime = System.currentTimeMillis()
+        val workName = getWorkName(assignmentId)
 
         if (dueTime <= currentTime) {
             WorkManager
                 .getInstance(context)
                 .cancelUniqueWork(workName)
 
+            NotificationPreferences.clearScheduledDeadline(
+                context = context,
+                userId = userId,
+                assignmentId = assignmentId
+            )
+
+            return
+        }
+
+        val notificationAlreadyShown =
+            NotificationPreferences.wasDeadlineNotificationShown(
+                context = context,
+                userId = userId,
+                assignmentId = assignmentId,
+                dueTimeMillis = dueTime
+            )
+
+        if (notificationAlreadyShown) {
+            return
+        }
+
+        val scheduledDueTime =
+            NotificationPreferences.getScheduledDeadline(
+                context = context,
+                userId = userId,
+                assignmentId = assignmentId
+            )
+
+        // Identyczny reminder już czeka w WorkManagerze.
+        if (scheduledDueTime == dueTime) {
             return
         }
 
@@ -71,6 +107,14 @@ object AssignmentDeadlineScheduler {
                 AssignmentDeadlineWorker.KEY_DUE_DATE_TEXT,
                 formattedDueDate
             )
+            .putString(
+                AssignmentDeadlineWorker.KEY_USER_ID,
+                userId
+            )
+            .putLong(
+                AssignmentDeadlineWorker.KEY_DUE_TIME_MILLIS,
+                dueTime
+            )
             .build()
 
         val request =
@@ -82,6 +126,13 @@ object AssignmentDeadlineScheduler {
                 .setInputData(inputData)
                 .addTag(DEADLINE_REMINDER_TAG)
                 .build()
+
+        NotificationPreferences.markDeadlineScheduled(
+            context = context,
+            userId = userId,
+            assignmentId = assignmentId,
+            dueTimeMillis = dueTime
+        )
 
         WorkManager
             .getInstance(context)

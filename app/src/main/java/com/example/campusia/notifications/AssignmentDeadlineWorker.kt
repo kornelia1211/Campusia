@@ -40,6 +40,32 @@ class AssignmentDeadlineWorker(
         val dueDateText = inputData.getString(KEY_DUE_DATE_TEXT)
             ?: ""
 
+        val userId =
+            inputData.getString(KEY_USER_ID)
+                ?: return Result.failure()
+
+        val dueTimeMillis =
+            inputData.getLong(
+                KEY_DUE_TIME_MILLIS,
+                -1L
+            )
+
+        if (dueTimeMillis <= 0L) {
+            return Result.failure()
+        }
+
+
+        if (
+            NotificationPreferences.wasDeadlineNotificationShown(
+                context = applicationContext,
+                userId = userId,
+                assignmentId = assignmentId,
+                dueTimeMillis = dueTimeMillis
+            )
+        ) {
+            return Result.success()
+        }
+
         createNotificationChannel(applicationContext)
 
         if (
@@ -100,6 +126,21 @@ class AssignmentDeadlineWorker(
                 notification
             )
 
+        NotificationPreferences.markDeadlineNotificationShown(
+            context = applicationContext,
+            userId = userId,
+            assignmentId = assignmentId,
+            dueTimeMillis = dueTimeMillis
+        )
+
+        NotificationPreferences.clearScheduledDeadline(
+            context = applicationContext,
+            userId = userId,
+            assignmentId = assignmentId
+        )
+
+
+
         return Result.success()
     }
 
@@ -112,6 +153,8 @@ class AssignmentDeadlineWorker(
 
         const val EXTRA_ASSIGNMENT_ID = "assignmentId"
         const val EXTRA_OPEN_ASSIGNMENT = "openAssignment"
+        const val KEY_USER_ID = "userId"
+        const val KEY_DUE_TIME_MILLIS = "dueTimeMillis"
 
         fun createNotificationChannel(
             context: Context
