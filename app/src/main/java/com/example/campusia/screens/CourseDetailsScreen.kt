@@ -76,6 +76,8 @@ import com.example.campusia.ui.theme.TextMuted
 import com.example.campusia.ui.theme.DangerRed
 import com.google.firebase.firestore.Query
 import com.example.campusia.notifications.AssignmentDeadlineScheduler
+import androidx.compose.runtime.DisposableEffect
+
 
 @Composable
 fun CourseDetailsScreen(
@@ -101,36 +103,89 @@ fun CourseDetailsScreen(
 
     val role = SessionManager.userRole
 
-    LaunchedEffect(Unit) {
-        db.collection("courses")
-            .document(courseId)
-            .addSnapshotListener { snapshot, _ ->
-                val fetchedCourse = snapshot?.toObject(Course::class.java)
-                course = fetchedCourse
+    DisposableEffect(courseId, role) {
 
-                fetchedCourse?.studentIds?.let { ids ->
-                    if (ids.isNotEmpty()) {
-                        db.collection("users")
-                            .whereIn("userId", ids)
-                            .get()
-                            .addOnSuccessListener { user ->
-                                students = user.toObjects(User::class.java)
-                            }
-                    } else {
+        val courseListener =
+            db.collection("courses")
+                .document(courseId)
+                .addSnapshotListener { snapshot, error ->
+
+                    if (error != null) {
+                        Toast.makeText(
+                            context,
+                            "Course loading error: ${error.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        return@addSnapshotListener
+                    }
+
+                    val fetchedCourse =
+                        snapshot?.toObject(Course::class.java)
+
+                    course = fetchedCourse
+
+                    val studentIds =
+                        fetchedCourse?.studentIds.orEmpty()
+
+                    if (studentIds.isEmpty()) {
                         students = emptyList()
+                    } else {
+                        db.collection("users")
+                            .whereIn("userId", studentIds)
+                            .get()
+                            .addOnSuccessListener { result ->
+                                students =
+                                    result.toObjects(User::class.java)
+                            }
+                            .addOnFailureListener { exception ->
+                                Toast.makeText(
+                                    context,
+                                    "Students loading error: ${exception.localizedMessage}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                     }
                 }
-            }
 
-        db.collection("assignments")
-            .whereEqualTo("courseId", courseId)
-            .orderBy("dueDate", Query.Direction.ASCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error == null && snapshot != null) {
-                    assignments = snapshot.toObjects(Assignment::class.java)
+        val assignmentsListener =
+            db.collection("assignments")
+                .whereEqualTo("courseId", courseId)
+                .addSnapshotListener { snapshot, error ->
+
+                    if (error != null) {
+                        Toast.makeText(
+                            context,
+                            "Assignments loading error: ${error.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        return@addSnapshotListener
+                    }
+
+                    val loadedAssignments =
+                        snapshot
+                            ?.documents
+                            ?.mapNotNull { document ->
+                                document
+                                    .toObject(Assignment::class.java)
+                                    ?.copy(
+                                        assignmentId =
+                                            document.id
+                                    )
+                            }
+                            ?.sortedBy { assignment ->
+                                assignment.dueDate
+                                    ?.toDate()
+                                    ?.time
+                                    ?: Long.MAX_VALUE
+                            }
+                            ?: emptyList()
+
+                    assignments = loadedAssignments
 
                     if (role == UserRole.STUDENT) {
-                        assignments.forEach { assignment ->
+                        loadedAssignments.forEach { assignment ->
                             AssignmentDeadlineScheduler.scheduleReminder(
                                 context = context,
                                 assignment = assignment
@@ -138,7 +193,11 @@ fun CourseDetailsScreen(
                         }
                     }
                 }
-            }
+
+        onDispose {
+            courseListener.remove()
+            assignmentsListener.remove()
+        }
     }
 
     LazyColumn(
