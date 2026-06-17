@@ -115,6 +115,10 @@ fun ChatListScreen(
             emptyList()
         }
 
+    var currentUserName by remember {
+        mutableStateOf("Private Chat")
+    }
+
     fun openCourseChat(course: Course) {
         val courseId = course.courseId
 
@@ -151,10 +155,20 @@ fun ChatListScreen(
             }
     }
 
-    fun openPrivateChat(user: ChatUserSuggestion) {
+    fun openPrivateChat(
+        user: ChatUserSuggestion
+    ) {
         val selectedUserId = user.userId
 
-        if (selectedUserId.isBlank() || currentUserId.isBlank()) {
+        val selectedUserName =
+            user.fullName.ifBlank {
+                "Private Chat"
+            }
+
+        if (
+            selectedUserId.isBlank() ||
+            currentUserId.isBlank()
+        ) {
             Toast.makeText(
                 context,
                 "User id is missing",
@@ -164,50 +178,47 @@ fun ChatListScreen(
         }
 
         val privateRoomId =
-            if (currentUserId < selectedUserId) {
-                "${currentUserId}_$selectedUserId"
-            } else {
-                "${selectedUserId}_$currentUserId"
+            listOf(
+                currentUserId,
+                selectedUserId
+            )
+                .sorted()
+                .joinToString("_")
+
+        val roomReference =
+            db.collection("chat_rooms")
+                .document(privateRoomId)
+
+        val roomData = mapOf(
+            "title" to selectedUserName,
+            "type" to "private",
+            "participants" to listOf(
+                currentUserId,
+                selectedUserId
+            ),
+            "titlesByUser" to mapOf(
+                currentUserId to selectedUserName,
+                selectedUserId to currentUserName
+            )
+        )
+
+        roomReference
+            .set(
+                roomData,
+                com.google.firebase.firestore.SetOptions.merge()
+            )
+            .addOnSuccessListener {
+                newChatTitle = ""
+
+                navController.navigate(
+                    "chat/$privateRoomId/$selectedUserName"
+                )
             }
-
-        val fullName = user.fullName
-
-        db.collection("chat_rooms")
-            .document(privateRoomId)
-            .get()
-            .addOnSuccessListener { roomDocument ->
-                if (roomDocument.exists()) {
-                    val existingTitle =
-                        roomDocument.getString("title") ?: fullName
-
-                    newChatTitle = ""
-                    navController.navigate("chat/$privateRoomId/$existingTitle")
-                } else {
-                    val roomData = mapOf(
-                        "title" to fullName,
-                        "participants" to listOf(currentUserId, selectedUserId)
-                    )
-
-                    db.collection("chat_rooms")
-                        .document(privateRoomId)
-                        .set(roomData)
-                        .addOnSuccessListener {
-                            newChatTitle = ""
-                            navController.navigate("chat/$privateRoomId/$fullName")
-                        }
-                        .addOnFailureListener { e ->
-                            Toast.makeText(
-                                context,
-                                "Failed to create chat: ${e.localizedMessage}",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                }
-            }
-            .addOnFailureListener { e ->
+            .addOnFailureListener { exception ->
                 Toast.makeText(
                     context,
-                    "Database error: ${e.localizedMessage}",
+                    "Failed to open chat: " +
+                            exception.localizedMessage,
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -229,9 +240,39 @@ fun ChatListScreen(
 
             if (snapshot != null) {
                 chatRooms = snapshot.documents.mapNotNull { document ->
-                    val title = document.getString("title") ?: "Unnamed Chat"
+
                     val participantsList =
-                        document.get("participants") as? List<String> ?: emptyList()
+                        (document.get("participants") as? List<*>)
+                            ?.mapNotNull { participant ->
+                                participant as? String
+                            }
+                            ?: emptyList()
+
+                    val roomType =
+                        document.getString("type").orEmpty()
+
+                    val title =
+                        if (roomType == "private") {
+
+                            val otherUserId =
+                                participantsList.firstOrNull { participantId ->
+                                    participantId != currentUserId
+                                }
+
+                            val otherUser =
+                                availableUsers.firstOrNull { user ->
+                                    user.userId == otherUserId
+                                }
+
+                            otherUser
+                                ?.fullName
+                                ?.takeIf { it.isNotBlank() }
+                                ?: "Private Chat"
+
+                        } else {
+                            document.getString("title")
+                                ?: "Unnamed Chat"
+                        }
 
                     ChatRoom(
                         id = document.id,
@@ -315,10 +356,7 @@ fun ChatListScreen(
 
                     if (snapshot != null) {
                         availableUsers = snapshot.documents.mapNotNull { document ->
-                            val userId =
-                                document.getString("userId")?.ifBlank {
-                                    document.id
-                                } ?: document.id
+                            val userId = document.id
 
                             if (userId == currentUserId) {
                                 return@mapNotNull null
