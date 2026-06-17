@@ -395,6 +395,7 @@ fun CourseDetailsScreen(
 
                     StudentCard(
                         student = student,
+                        role = role,
                         onDeleteClick = {
                             studentToRemove = student
                         }
@@ -580,6 +581,7 @@ private fun DetailRow(
 @Composable
 private fun StudentCard(
     student: User,
+    role: UserRole,
     onDeleteClick: () -> Unit
 ) {
     Card(
@@ -630,18 +632,21 @@ private fun StudentCard(
                 )
             }
 
-            IconButton(
-                onClick = onDeleteClick,
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = DangerRed.copy(alpha = 0.12f),
-                    contentColor = DangerRed
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remove student"
-                )
+            if (role != UserRole.STUDENT){
+                IconButton(
+                    onClick = onDeleteClick,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = DangerRed.copy(alpha = 0.12f),
+                        contentColor = DangerRed
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Remove student"
+                    )
+                }
             }
+
         }
     }
 }
