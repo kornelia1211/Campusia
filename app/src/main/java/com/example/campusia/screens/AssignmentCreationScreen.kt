@@ -263,7 +263,9 @@ fun AssignmentCreationScreen(
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)
-            )
+            ).apply {
+                datePicker.minDate = System.currentTimeMillis()
+            }
 
             LabeledField(
                 label = "Due date",
@@ -454,7 +456,19 @@ fun createAssignment(
     val formatter = SimpleDateFormat("MM/dd/yyyy HH:mm", Locale.getDefault()).apply {
         timeZone = TimeZone.getDefault()
     }
-    val parsedDate = formatter.parse(dueDateString) ?: throw Exception("Parsing failed")
+    val parsedDate =
+        formatter.parse(dueDateString)
+            ?: throw Exception("Parsing failed")
+
+    if (parsedDate.time <= System.currentTimeMillis()) {
+        Toast.makeText(
+            context,
+            "Deadline cannot be in the past.",
+            Toast.LENGTH_SHORT
+        ).show()
+        return
+    }
+
     val firebaseTimestamp = Timestamp(parsedDate)
 
 
@@ -701,6 +715,26 @@ fun updateAssignment(
             "$selectedDate $dueHour:$dueMinute"
         )
 
+    if (parsedDate == null) {
+        Toast.makeText(
+            context,
+            "Invalid deadline.",
+            Toast.LENGTH_SHORT
+        ).show()
+        return
+    }
+
+    if (parsedDate.time <= System.currentTimeMillis()) {
+        Toast.makeText(
+            context,
+            "Deadline cannot be in the past.",
+            Toast.LENGTH_SHORT
+        ).show()
+        return
+    }
+
+    FirebaseFirestore.getInstance()
+
     FirebaseFirestore.getInstance()
         .collection("assignments")
         .document(assignmentId)
@@ -708,7 +742,7 @@ fun updateAssignment(
             mapOf(
                 "title" to title,
                 "description" to description,
-                "dueDate" to Timestamp(parsedDate!!)
+                "dueDate" to Timestamp(parsedDate)
             )
         )
         .addOnSuccessListener {

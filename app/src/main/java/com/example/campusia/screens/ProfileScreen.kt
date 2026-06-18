@@ -72,6 +72,7 @@ import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import com.example.campusia.notifications.FcmTokenManager
 import com.example.campusia.notifications.NotificationPreferences
 
 @Composable
@@ -348,7 +349,16 @@ private fun ProfileTopBar(
 
         IconButton(
             onClick = {
-                auth.signOut()
+                FcmTokenManager.removeCurrentTokenFromLoggedUser {
+                    auth.signOut()
+
+                    navController.navigate("login_screen") {
+                        popUpTo(0) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                }
                 navController.navigate("login_screen") {
                     popUpTo(0) { inclusive = true }
                     launchSingleTop = true

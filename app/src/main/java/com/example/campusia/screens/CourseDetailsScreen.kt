@@ -74,9 +74,11 @@ import com.example.campusia.ui.theme.PrimaryPurpleDark
 import com.example.campusia.ui.theme.PrimaryPurple
 import com.example.campusia.ui.theme.TextMuted
 import com.example.campusia.ui.theme.DangerRed
-import com.google.firebase.firestore.Query
-import com.example.campusia.notifications.AssignmentDeadlineScheduler
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Edit
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 
 @Composable
@@ -183,15 +185,6 @@ fun CourseDetailsScreen(
                             ?: emptyList()
 
                     assignments = loadedAssignments
-
-                    if (role == UserRole.STUDENT) {
-                        loadedAssignments.forEach { assignment ->
-                            AssignmentDeadlineScheduler.scheduleReminder(
-                                context = context,
-                                assignment = assignment
-                            )
-                        }
-                    }
                 }
 
         onDispose {
@@ -320,38 +313,29 @@ fun CourseDetailsScreen(
                     )
                 } else {
                     assignments.forEachIndexed { index, assignment ->
-                        AssignmentCard(
+                        CourseStyleAssignmentCard(
                             assignment = assignment,
-
+                            role = role,
                             onClick = {
                                 navController.navigate(
                                     "assignment_details/${assignment.assignmentId}"
                                 )
                             },
-
                             onEdit = {
                                 navController.navigate(
                                     "edit_assignment/${assignment.assignmentId}/$courseId"
                                 )
                             },
-
                             onDelete = {
-
                                 FirebaseFirestore
                                     .getInstance()
                                     .collection("assignments")
-                                    .document(
-                                        assignment.assignmentId
-                                    )
+                                    .document(assignment.assignmentId)
                                     .delete()
-
                                     .addOnSuccessListener {
-
                                         assignments =
                                             assignments.filterNot {
-
-                                                it.assignmentId ==
-                                                        assignment.assignmentId
+                                                it.assignmentId == assignment.assignmentId
                                             }
                                     }
                             }
@@ -560,6 +544,147 @@ private fun HeaderCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.92f)
             )
+        }
+    }
+}
+
+@Composable
+private fun CourseStyleAssignmentCard(
+    assignment: Assignment,
+    role: UserRole,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val formattedDueDate = remember(assignment.dueDate) {
+        assignment.dueDate?.toDate()?.let { date ->
+            SimpleDateFormat(
+                "MM/dd/yyyy HH:mm",
+                Locale.getDefault()
+            ).format(date)
+        } ?: "No due date"
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onClick()
+            },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .background(
+                            color = Color(0xFFF2ECFF),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Description,
+                        contentDescription = null,
+                        tint = PrimaryPurpleDark,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = assignment.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "View more details",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted
+                    )
+                }
+
+                if (role != UserRole.STUDENT) {
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Row {
+                        IconButton(
+                            onClick = onEdit,
+                            modifier = Modifier.size(40.dp),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = PrimaryPurple.copy(alpha = 0.10f),
+                                contentColor = PrimaryPurpleDark
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit assignment",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(40.dp),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = DangerRed.copy(alpha = 0.12f),
+                                contentColor = DangerRed
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete assignment",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.CalendarMonth,
+                    contentDescription = null,
+                    tint = PrimaryPurpleDark,
+                    modifier = Modifier.size(18.dp)
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Text(
+                    text = "Due: $formattedDueDate",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextMuted
+                )
+            }
         }
     }
 }

@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -49,7 +51,6 @@ import com.example.campusia.SessionManager
 import com.example.campusia.components.BottomNavBar
 import com.example.campusia.components.RoundedButton
 import com.example.campusia.components.StyledInputField
-import com.example.campusia.entities.ChatRoom
 import com.example.campusia.entities.Course
 import com.example.campusia.entities.UserRole
 import com.example.campusia.ui.theme.PrimaryPurple
@@ -60,6 +61,10 @@ import com.example.campusia.ui.theme.TextPrimary
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.IconButton
 
 private data class ChatUserSuggestion(
     val userId: String,
@@ -77,7 +82,20 @@ private data class RawChatRoom(
     val storedTitle: String,
     val type: String,
     val participants: List<String>,
-    val titlesByUser: Map<String, String>
+    val titlesByUser: Map<String, String>,
+    val lastMessageAt: Timestamp?,
+    val lastMessageSenderId: String,
+    val lastReadAt: Timestamp?,
+    val hiddenFor: List<String>
+)
+
+
+private data class UiChatRoom(
+    val id: String,
+    val title: String,
+    val participants: List<String>,
+    val isUnread: Boolean,
+    val lastMessageMillis: Long
 )
 
 @Composable
@@ -135,41 +153,71 @@ fun ChatListScreen(
         availableUsers,
         currentUserId
     ) {
-        rawChatRooms.map { room ->
+        rawChatRooms
+            .filter { room ->
+                currentUserId !in room.hiddenFor
+            }
+            .map { room ->
 
-            val displayedTitle =
-                if (room.type == "private") {
-                    val otherUserId =
-                        room.participants.firstOrNull { participantId ->
-                            participantId != currentUserId
-                        }
-
-                    val otherUserName =
-                        availableUsers
-                            .firstOrNull { user ->
-                                user.userId == otherUserId
+                val displayedTitle =
+                    if (room.type == "private") {
+                        val otherUserId =
+                            room.participants.firstOrNull { participantId ->
+                                participantId != currentUserId
                             }
-                            ?.fullName
-                            ?.takeIf { it.isNotBlank() }
 
-                    otherUserName
-                        ?: room.titlesByUser[currentUserId]
-                        ?: room.storedTitle.takeIf {
-                            it.isNotBlank()
+                        val otherUserName =
+                            availableUsers
+                                .firstOrNull { user ->
+                                    user.userId == otherUserId
+                                }
+                                ?.fullName
+                                ?.takeIf { it.isNotBlank() }
+
+                        otherUserName
+                            ?: room.titlesByUser[currentUserId]
+                            ?: room.storedTitle.takeIf {
+                                it.isNotBlank()
+                            }
+                            ?: "Private Chat"
+                    } else {
+                        room.storedTitle.ifBlank {
+                            "Unnamed Chat"
                         }
-                        ?: "Private Chat"
-                } else {
-                    room.storedTitle.ifBlank {
-                        "Unnamed Chat"
                     }
-                }
 
-            ChatRoom(
-                id = room.id,
-                title = displayedTitle,
-                participants = room.participants
+                val lastMessageMillis =
+                    room.lastMessageAt
+                        ?.toDate()
+                        ?.time
+                        ?: 0L
+
+                val lastReadMillis =
+                    room.lastReadAt
+                        ?.toDate()
+                        ?.time
+                        ?: 0L
+
+                val isUnread =
+                    room.lastMessageSenderId.isNotBlank() &&
+                            room.lastMessageSenderId != currentUserId &&
+                            lastMessageMillis > lastReadMillis
+
+                UiChatRoom(
+                    id = room.id,
+                    title = displayedTitle,
+                    participants = room.participants,
+                    isUnread = isUnread,
+                    lastMessageMillis = lastMessageMillis
+                )
+            }
+            .sortedWith(
+                compareByDescending<UiChatRoom> {
+                    it.isUnread
+                }.thenByDescending {
+                    it.lastMessageMillis
+                }
             )
-        }
     }
 
     fun openCourseChat(course: Course) {
@@ -195,14 +243,52 @@ fun ChatListScreen(
         db.collection("chat_rooms")
             .document(courseId)
             .set(roomData)
+        db.collection("chat_rooms")
+            .document(courseId)
+            .set(roomData, SetOptions.merge())
             .addOnSuccessListener {
+                db.collection("chat_rooms")
+                    .document(courseId)
+                    .update(
+                        "hiddenFor",
+                        FieldValue.arrayRemove(currentUserId)
+                    )
+
                 newChatTitle = ""
-                navController.navigate("chat/$courseId/${course.title}")
+
+                navController.navigate(
+                    "chat/$courseId/${course.title}"
+                )
             }
             .addOnFailureListener { e ->
                 Toast.makeText(
                     context,
                     "Failed to open chat: ${e.localizedMessage}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+    }
+
+    fun hideChatFromList(chatRoomId: String) {
+        if (currentUserId.isBlank()) {
+            Toast.makeText(
+                context,
+                "User id is missing",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        db.collection("chat_rooms")
+            .document(chatRoomId)
+            .update(
+                "hiddenFor",
+                FieldValue.arrayUnion(currentUserId)
+            )
+            .addOnFailureListener { exception ->
+                Toast.makeText(
+                    context,
+                    "Could not remove chat: ${exception.localizedMessage}",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -252,11 +338,15 @@ fun ChatListScreen(
 
         db.collection("chat_rooms")
             .document(privateRoomId)
-            .set(
-                roomData,
-                SetOptions.merge()
-            )
+            .set(roomData, SetOptions.merge())
             .addOnSuccessListener {
+                db.collection("chat_rooms")
+                    .document(privateRoomId)
+                    .update(
+                        "hiddenFor",
+                        FieldValue.arrayRemove(currentUserId)
+                    )
+
                 newChatTitle = ""
 
                 navController.navigate(
@@ -331,6 +421,18 @@ fun ChatListScreen(
                                     ?.toMap()
                                     ?: emptyMap()
 
+                            val lastReadBy =
+                                document.get("lastReadBy") as? Map<*, *>
+
+                            val lastReadAt =
+                                lastReadBy
+                                    ?.get(currentUserId) as? Timestamp
+
+                            val hiddenFor =
+                                (document.get("hiddenFor") as? List<*>)
+                                    ?.mapNotNull { it as? String }
+                                    ?: emptyList()
+
                             RawChatRoom(
                                 id = document.id,
                                 storedTitle =
@@ -340,7 +442,14 @@ fun ChatListScreen(
                                     document.getString("type")
                                         .orEmpty(),
                                 participants = participants,
-                                titlesByUser = titlesByUser
+                                titlesByUser = titlesByUser,
+                                lastMessageAt =
+                                    document.getTimestamp("lastMessageAt"),
+                                lastMessageSenderId =
+                                    document.getString("lastMessageSenderId")
+                                        .orEmpty(),
+                                lastReadAt = lastReadAt,
+                                hiddenFor = hiddenFor
                             )
                         }
                             ?: emptyList()
@@ -691,6 +800,9 @@ fun ChatListScreen(
                                 navController.navigate(
                                     "chat/${room.id}/${room.title}"
                                 )
+                            },
+                            onDelete = {
+                                hideChatFromList(room.id)
                             }
                         )
                     }
@@ -753,10 +865,11 @@ private fun ChatSuggestionCard(
 }
 
 @Composable
-fun ChatRoomCard(
-    chatRoom: ChatRoom,
-    onClick: () -> Unit
-) {
+private fun ChatRoomCard(
+    chatRoom: UiChatRoom,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+){
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -783,16 +896,63 @@ fun ChatRoomCard(
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            Column {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = chatRoom.title,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight =
+                        if (chatRoom.isUnread) {
+                            FontWeight.ExtraBold
+                        } else {
+                            FontWeight.Bold
+                        },
                     color = TextPrimary
                 )
 
                 Text(
-                    text = "Join conversation",
-                    color = TextMuted
+                    text =
+                        if (chatRoom.isUnread) {
+                            "New message"
+                        } else {
+                            "Join conversation"
+                        },
+                    color =
+                        if (chatRoom.isUnread) {
+                            PrimaryPurpleDark
+                        } else {
+                            TextMuted
+                        },
+                    fontWeight =
+                        if (chatRoom.isUnread) {
+                            FontWeight.SemiBold
+                        } else {
+                            FontWeight.Normal
+                        }
+                )
+
+            }
+
+            IconButton(
+                onClick = onDelete
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = "Remove chat from list",
+                    tint = TextMuted
+                )
+            }
+
+            if (chatRoom.isUnread) {
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .background(
+                            color = PrimaryPurple,
+                            shape = CircleShape
+                        )
                 )
             }
         }

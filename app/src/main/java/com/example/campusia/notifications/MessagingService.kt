@@ -24,9 +24,20 @@ class MessagingService : FirebaseMessagingService() {
         FcmTokenManager.saveTokenForCurrentUser(token)
     }
 
-    override fun onMessageReceived(message: RemoteMessage) {
+    override fun onMessageReceived(
+        message: RemoteMessage
+    ) {
         super.onMessageReceived(message)
-        showChatNotification(message)
+
+        when (message.data["type"]) {
+            "assignment_deadline" -> {
+                showChatNotification(message)
+            }
+
+            else -> {
+                showChatNotification(message)
+            }
+        }
     }
 
     private fun showChatNotification(message: RemoteMessage) {

@@ -31,9 +31,11 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -49,7 +51,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ButtonDefaults
 import androidx.navigation.NavHostController
 import com.example.campusia.components.BottomNavBar
 import com.example.campusia.components.UploadMaterialsCard
@@ -85,6 +90,9 @@ data class AssignmentSubmission(
     val submittedAt: Timestamp? = null,
     val dueDate: Timestamp? = null,
     val isLate: Boolean = false,
+    val gradePercent: Long? = null,
+    val gradedAt: Timestamp? = null,
+    val gradedBy: String = "",
     val files: List<SubmittedAssignmentFile> = emptyList()
 )
 
@@ -199,23 +207,6 @@ fun AssignmentDetailsScreen(
 
         onDispose {
             assignmentListener.remove()
-        }
-    }
-
-    LaunchedEffect(
-        assignment,
-        normalizedUserRole
-    ) {
-        val currentAssignment = assignment
-
-        if (
-            normalizedUserRole == "student" &&
-            currentAssignment != null
-        ) {
-            AssignmentDeadlineScheduler.scheduleReminder(
-                context = context,
-                assignment = currentAssignment
-            )
         }
     }
 
@@ -565,6 +556,23 @@ fun AssignmentDetailsScreen(
                                 Spacer(Modifier.height(12.dp))
                             }
 
+                            val studentGrade = studentSubmission?.gradePercent
+
+                            if (studentGrade != null) {
+                                GradeBadge(
+                                    text = "Graded: $studentGrade%"
+                                )
+
+                                Spacer(Modifier.height(12.dp))
+                            } else if (studentSubmission != null) {
+                                Text(
+                                    text = "Not graded yet.",
+                                    color = TextMuted
+                                )
+
+                                Spacer(Modifier.height(12.dp))
+                            }
+
                             val files = studentSubmission?.files ?: emptyList()
 
                             if (files.isEmpty()) {
@@ -636,6 +644,16 @@ fun AssignmentDetailsScreen(
                                                 context = context,
                                                 url = url
                                             )
+                                        },
+                                        onGradeSave = { gradedSubmission, grade ->
+                                            saveSubmissionGrade(
+                                                context = context,
+                                                db = db,
+                                                assignmentId = assignmentId,
+                                                studentId = gradedSubmission.studentId,
+                                                gradePercent = grade,
+                                                graderId = currentUserId.orEmpty()
+                                            )
                                         }
                                     )
 
@@ -669,6 +687,30 @@ private fun LateBadge(
         Text(
             text = text,
             color = Color(0xFFB00020),
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun GradeBadge(
+    text: String
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(PrimaryPurple.copy(alpha = 0.10f))
+            .border(
+                width = 1.dp,
+                color = PrimaryPurple.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(14.dp)
+    ) {
+        Text(
+            text = text,
+            color = PrimaryPurpleDark,
             fontWeight = FontWeight.Bold
         )
     }
@@ -735,7 +777,8 @@ private fun SubmittedFileItem(
 @Composable
 private fun StudentSubmissionCard(
     submission: AssignmentSubmission,
-    onFileClick: (String) -> Unit
+    onFileClick: (String) -> Unit,
+    onGradeSave: (AssignmentSubmission, Int) -> Unit
 ) {
     val formattedSubmittedDate = remember(submission.submittedAt) {
         submission.submittedAt?.toDate()?.let { date ->
@@ -782,6 +825,13 @@ private fun StudentSubmissionCard(
 
             Spacer(Modifier.height(14.dp))
 
+            GradeEditor(
+                submission = submission,
+                onGradeSave = onGradeSave
+            )
+
+            Spacer(Modifier.height(14.dp))
+
             if (submission.files.isEmpty()) {
                 Text(
                     text = "No files in this submission.",
@@ -801,6 +851,100 @@ private fun StudentSubmissionCard(
                     Spacer(Modifier.height(10.dp))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun GradeEditor(
+    submission: AssignmentSubmission,
+    onGradeSave: (AssignmentSubmission, Int) -> Unit
+) {
+    var gradeText by remember(submission.gradePercent) {
+        mutableStateOf(
+            submission.gradePercent?.toString() ?: ""
+        )
+    }
+
+    var errorText by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.75f))
+            .border(
+                width = 1.dp,
+                color = FieldBorder,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(14.dp)
+    ) {
+        Text(
+            text = if (submission.gradePercent != null) {
+                "Grade: ${submission.gradePercent}%"
+            } else {
+                "Grade: not added yet"
+            },
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OutlinedTextField(
+                value = gradeText,
+                onValueChange = { value ->
+                    gradeText = value
+                        .filter { it.isDigit() }
+                        .take(3)
+                    errorText = null
+                },
+                label = {
+                    Text("Grade %")
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
+                ),
+                modifier = Modifier.weight(1f)
+            )
+
+            Button(
+                onClick = {
+                    val grade = gradeText.toIntOrNull()
+
+                    if (grade == null || grade !in 0..100) {
+                        errorText = "Enter 0-100"
+                    } else {
+                        errorText = null
+                        onGradeSave(submission, grade)
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryPurpleDark,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Save")
+            }
+        }
+
+        errorText?.let { message ->
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = message,
+                color = Color(0xFFB00020),
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
@@ -940,6 +1084,51 @@ private fun saveSubmissionToFirestore(
                 exception.message
                     ?: "Could not save submission."
             )
+        }
+}
+
+private fun saveSubmissionGrade(
+    context: Context,
+    db: FirebaseFirestore,
+    assignmentId: String,
+    studentId: String,
+    gradePercent: Int,
+    graderId: String
+) {
+    if (studentId.isBlank()) {
+        Toast.makeText(
+            context,
+            "Student id is missing.",
+            Toast.LENGTH_SHORT
+        ).show()
+        return
+    }
+
+    db.collection("assignments")
+        .document(assignmentId)
+        .collection("submissions")
+        .document(studentId)
+        .set(
+            mapOf(
+                "gradePercent" to gradePercent,
+                "gradedAt" to Timestamp.now(),
+                "gradedBy" to graderId
+            ),
+            SetOptions.merge()
+        )
+        .addOnSuccessListener {
+            Toast.makeText(
+                context,
+                "Grade saved.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        .addOnFailureListener { exception ->
+            Toast.makeText(
+                context,
+                exception.message ?: "Could not save grade.",
+                Toast.LENGTH_LONG
+            ).show()
         }
 }
 
