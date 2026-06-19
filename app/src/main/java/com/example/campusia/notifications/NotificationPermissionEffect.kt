@@ -16,7 +16,7 @@ fun NotificationPermissionEffect() {
 
     LaunchedEffect(Unit) {
         MessagingService.createNotificationChannel(context)
-        AssignmentDeadlineWorker.createNotificationChannel(context)
+        //AssignmentDeadlineWorker.createNotificationChannel(context)
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

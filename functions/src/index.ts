@@ -21,6 +21,7 @@ const db = getFirestore();
 const DAY_MILLIS = 24 * 60 * 60 * 1000;
 const SHORT_DEADLINE_DELAY_MILLIS = 3 * 60 * 1000;
 const GRADE_NOTIFICATION_DELAY_MILLIS = 3 * 60 * 1000;
+const ANNOUNCEMENT_NOTIFICATION_DELAY_MILLIS = 3 * 60 * 1000;
 
 function chunkArray<T>(
     items: T[],
@@ -339,6 +340,86 @@ async function sendAssignmentReminder(
     await removeInvalidTokens(invalidTokens);
 }
 
+async function sendAnnouncementNotification(
+    announcementId: string,
+    courseId: string,
+    announcementTitle: string,
+    announcementMessage: string
+): Promise<void> {
+    const tokens = await getCourseStudentTokens(courseId);
+
+    if (tokens.length === 0) {
+        logger.warn("No FCM tokens found for announcement notification", {
+            announcementId,
+            courseId,
+        });
+
+        return;
+    }
+
+    const trimmedMessage = announcementMessage.trim();
+    const shortMessage =
+        trimmedMessage.length > 120
+            ? `${trimmedMessage.substring(0, 117)}...`
+            : trimmedMessage;
+
+    logger.info("Sending announcement notification", {
+        announcementId,
+        courseId,
+        tokenCount: tokens.length,
+    });
+
+    const tokenChunks = chunkArray(tokens, 500);
+    const invalidTokens: string[] = [];
+
+    for (const tokenChunk of tokenChunks) {
+        const response = await getMessaging().sendEachForMulticast({
+            tokens: tokenChunk,
+            data: {
+                type: "course_announcement",
+                announcementId,
+                courseId,
+                title: "New course announcement",
+                body: `${announcementTitle}: ${shortMessage}`,
+            },
+            android: {
+                priority: "high",
+            },
+        });
+
+        response.responses.forEach((result, index) => {
+            if (!result.success) {
+                logger.error("FCM announcement send error", {
+                    announcementId,
+                    courseId,
+                    errorCode: result.error?.code,
+                    errorMessage: result.error?.message,
+                });
+
+                const errorCode = result.error?.code;
+
+                if (
+                    errorCode ===
+                        "messaging/registration-token-not-registered" ||
+                    errorCode ===
+                        "messaging/invalid-registration-token"
+                ) {
+                    invalidTokens.push(tokenChunk[index]);
+                }
+            }
+        });
+
+        logger.info("FCM announcement multicast result", {
+            announcementId,
+            courseId,
+            successCount: response.successCount,
+            failureCount: response.failureCount,
+        });
+    }
+
+    await removeInvalidTokens(invalidTokens);
+}
+
 export const onAssignmentCreated = onDocumentCreated(
     "assignments/{assignmentId}",
     async (event) => {
@@ -429,6 +510,65 @@ export const onAssignmentCreated = onDocumentCreated(
     }
 );
 
+
+export const onAnnouncementCreated = onDocumentCreated(
+    "announcements/{announcementId}",
+    async (event) => {
+        const snapshot = event.data;
+
+        if (!snapshot) {
+            return;
+        }
+
+        const announcement = snapshot.data();
+
+        const announcementId = snapshot.id;
+        const courseId = announcement.courseId as string | undefined;
+        const title = announcement.title as string | undefined;
+        const message = announcement.message as string | undefined;
+
+        logger.info("Announcement created trigger started", {
+            announcementId,
+            courseId,
+            title,
+            hasMessage: message != null,
+        });
+
+        if (!courseId || !title || !message) {
+            logger.warn("Announcement notification skipped: missing data", {
+                announcementId,
+                courseId,
+                title,
+                hasMessage: message != null,
+            });
+
+            return;
+        }
+
+        const jobId = `${announcementId}_announcement`;
+
+        await db.collection("assignment_notification_jobs")
+            .doc(jobId)
+            .set({
+                announcementId,
+                courseId,
+                title,
+                message,
+                sendAt: Timestamp.fromMillis(
+                    Date.now() + ANNOUNCEMENT_NOTIFICATION_DELAY_MILLIS
+                ),
+                sent: false,
+                type: "announcement_created",
+                createdAt: FieldValue.serverTimestamp(),
+            });
+
+        logger.info("Announcement notification job created", {
+            announcementId,
+            courseId,
+            jobId,
+        });
+    }
+);
 
 export const onSubmissionGradeUpdated = onDocumentUpdated(
     "assignments/{assignmentId}/submissions/{studentId}",
@@ -536,6 +676,13 @@ export const processAssignmentNotificationJobs = onSchedule(
                         job.studentId as string,
                         job.title as string,
                         job.gradePercent as number
+                    );
+                } else if (job.type === "announcement_created") {
+                    await sendAnnouncementNotification(
+                        job.announcementId as string,
+                        job.courseId as string,
+                        job.title as string,
+                        job.message as string
                     );
                 } else {
                     await sendAssignmentReminder(

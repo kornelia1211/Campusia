@@ -75,7 +75,6 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import java.text.SimpleDateFormat
 import java.util.Locale
-import com.example.campusia.notifications.AssignmentDeadlineScheduler
 
 data class SubmittedAssignmentFile(
     val fileName: String = "",

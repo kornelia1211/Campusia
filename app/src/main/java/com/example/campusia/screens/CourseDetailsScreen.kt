@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Business
@@ -77,6 +76,8 @@ import com.example.campusia.ui.theme.DangerRed
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.outlined.Info
+import com.example.campusia.entities.Announcement
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -99,11 +100,18 @@ fun CourseDetailsScreen(
 
     var assignments by remember { mutableStateOf<List<Assignment>>(emptyList()) }
 
+    var announcements by remember {
+        mutableStateOf<List<Announcement>>(emptyList())
+    }
+
     var studentToRemove by remember {
         mutableStateOf<User?>(null)
     }
 
     val role = SessionManager.userRole
+
+    val previewAssignments = assignments.take(3)
+    val previewAnnouncements = announcements.take(3)
 
     DisposableEffect(courseId, role) {
 
@@ -193,6 +201,36 @@ fun CourseDetailsScreen(
         }
     }
 
+    DisposableEffect(courseId) {
+        val listener = FirebaseFirestore.getInstance()
+            .collection("announcements")
+            .whereEqualTo("courseId", courseId)
+            .addSnapshotListener { snapshot, exception ->
+                if (exception != null) {
+                    announcements = emptyList()
+                    return@addSnapshotListener
+                }
+
+                announcements = snapshot
+                    ?.documents
+                    ?.mapNotNull { document ->
+                        document
+                            .toObject(Announcement::class.java)
+                            ?.copy(
+                                announcementId = document.id
+                            )
+                    }
+                    ?.sortedByDescending { announcement ->
+                        announcement.sendTime?.toDate()?.time ?: 0L
+                    }
+                    ?: emptyList()
+            }
+
+        onDispose {
+            listener.remove()
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -241,11 +279,7 @@ fun CourseDetailsScreen(
                         iconSize = 17.dp,
                         contentPadding = PaddingValues(horizontal = 4.dp),
                         onClick = {
-                            Toast.makeText(
-                                context,
-                                "Announcement Clicked",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            navController.navigate("announcement_creation_screen/$courseId")
                         }
                     )
                 }
@@ -301,7 +335,71 @@ fun CourseDetailsScreen(
             }
         }
 
-        // toDo: Move students and assignments to tabs
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(
+                        1.dp,
+                        FieldBorder,
+                        RoundedCornerShape(24.dp)
+                    ),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = FieldBackground
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+                    Text(
+                        text = "Course Announcements",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    if (announcements.isEmpty()) {
+                        Text(
+                            text = "No announcements yet.",
+                            color = TextMuted
+                        )
+                    } else {
+                        previewAnnouncements.forEachIndexed { index, announcement ->
+                            CourseAnnouncementItem(
+                                announcement = announcement,
+                                onClick = {
+                                    navController.navigate(
+                                        "announcement_details_screen/${announcement.announcementId}"
+                                    )
+                                }
+                            )
+
+                            if (index != previewAnnouncements.lastIndex) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                        }
+
+                        if (announcements.size > previewAnnouncements.size) {
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            RoundedButton(
+                                text = "View all announcements",
+                                height = 44.dp,
+                                fontSize = 14.sp,
+                                onClick = {
+                                    navController.navigate(
+                                        "course_announcements_screen/$courseId"
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         item {
             SectionCard(title = "Course Assignments") {
@@ -312,7 +410,7 @@ fun CourseDetailsScreen(
                         color = TextMuted
                     )
                 } else {
-                    assignments.forEachIndexed { index, assignment ->
+                    previewAssignments.forEachIndexed { index, assignment ->
                         CourseStyleAssignmentCard(
                             assignment = assignment,
                             role = role,
@@ -341,9 +439,24 @@ fun CourseDetailsScreen(
                             }
                         )
 
-                        if (index != assignments.lastIndex) {
+                        if (index != previewAssignments.lastIndex) {
                             Spacer(modifier = Modifier.height(12.dp))
                         }
+                    }
+
+                    if (assignments.size > previewAssignments.size) {
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        RoundedButton(
+                            text = "View all assignments",
+                            height = 44.dp,
+                            fontSize = 14.sp,
+                            onClick = {
+                                navController.navigate(
+                                    "course_assignments_screen/$courseId"
+                                )
+                            }
+                        )
                     }
                 }
             }
@@ -620,7 +733,7 @@ private fun CourseStyleAssignmentCard(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "View more details",
+                        text = "Tap for more details",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextMuted
                     )
@@ -768,6 +881,96 @@ private fun DetailRow(
                 style = MaterialTheme.typography.bodyLarge,
                 color = TextMuted
             )
+        }
+    }
+}
+
+@Composable
+private fun CourseAnnouncementItem(
+    announcement: Announcement,
+    onClick: () -> Unit
+) {
+    val formattedSendTime = remember(announcement.sendTime) {
+        announcement.sendTime?.toDate()?.let { date ->
+            SimpleDateFormat(
+                "MM/dd/yyyy HH:mm",
+                Locale.getDefault()
+            ).format(date)
+        } ?: "Sending..."
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onClick()
+            },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(
+                        PrimaryPurple.copy(alpha = .12f),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = PrimaryPurpleDark
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = announcement.title,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "Tap to view announcement",
+                    color = TextMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Schedule,
+                        contentDescription = null,
+                        tint = PrimaryPurpleDark,
+                        modifier = Modifier.size(14.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Text(
+                        text = "Sent: $formattedSendTime",
+                        color = TextMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
         }
     }
 }

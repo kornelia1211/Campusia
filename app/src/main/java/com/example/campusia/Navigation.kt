@@ -19,6 +19,10 @@ import com.example.campusia.screens.RegisterScreen
 import com.example.campusia.screens.ScheduleScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.example.campusia.notifications.NotificationPermissionEffect
+import com.example.campusia.screens.AnnouncementCreationScreen
+import com.example.campusia.screens.AnnouncementDetailsScreen
+import com.example.campusia.screens.CourseAnnouncementsListScreen
+import com.example.campusia.screens.CourseAssignmentsListScreen
 
 @Composable
 fun Navigation(auth: FirebaseAuth) {
@@ -147,6 +151,42 @@ fun Navigation(auth: FirebaseAuth) {
             if (chatRoomId != null && chatTitle != null) {
                 ChatScreen(navController = navController, chatRoomId, chatTitle)
             }
+        }
+
+        composable("announcement_creation_screen/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+
+            AnnouncementCreationScreen(
+                navController = navController,
+                courseId = courseId
+            )
+        }
+
+        composable("announcement_details_screen/{announcementId}") { backStackEntry ->
+            val announcementId = backStackEntry.arguments?.getString("announcementId") ?: return@composable
+
+            AnnouncementDetailsScreen(
+                navController = navController,
+                announcementId = announcementId
+            )
+        }
+
+        composable("course_assignments_screen/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+
+            CourseAssignmentsListScreen(
+                navController = navController,
+                courseId = courseId
+            )
+        }
+
+        composable("course_announcements_screen/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: return@composable
+
+            CourseAnnouncementsListScreen(
+                navController = navController,
+                courseId = courseId
+            )
         }
 
     }
