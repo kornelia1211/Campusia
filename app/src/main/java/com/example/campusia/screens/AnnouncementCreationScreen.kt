@@ -55,23 +55,19 @@ import com.google.firebase.firestore.FirebaseFirestore
 @Composable
 fun AnnouncementCreationScreen(
     navController: NavHostController,
-    courseId: String
+    courseId: String,
+    announcementId: String? = null
 ) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
     val currentUser = FirebaseAuth.getInstance().currentUser
 
-    var title by remember {
-        mutableStateOf("")
-    }
+    val isEditMode = !announcementId.isNullOrBlank()
 
-    var message by remember {
-        mutableStateOf("")
-    }
-
-    var currentUserName by remember {
-        mutableStateOf(currentUser?.email ?: "User")
-    }
+    var title by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var currentUserName by remember { mutableStateOf(currentUser?.email ?: "User") }
+    var isLoading by remember { mutableStateOf(isEditMode) }
 
     LaunchedEffect(currentUser?.uid) {
         val uid = currentUser?.uid ?: return@LaunchedEffect
@@ -90,9 +86,28 @@ fun AnnouncementCreationScreen(
             }
     }
 
-    val isFormValid =
-        title.isNotBlank() &&
-                message.isNotBlank()
+    LaunchedEffect(announcementId) {
+        if (!announcementId.isNullOrBlank()) {
+            db.collection("announcements")
+                .document(announcementId)
+                .get()
+                .addOnSuccessListener { document ->
+                    title = document.getString("title") ?: ""
+                    message = document.getString("message") ?: ""
+                    isLoading = false
+                }
+                .addOnFailureListener { exception ->
+                    isLoading = false
+                    Toast.makeText(
+                        context,
+                        exception.message ?: "Failed to load announcement.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+        }
+    }
+
+    val isFormValid = title.isNotBlank() && message.isNotBlank() && !isLoading
 
     Scaffold(
         bottomBar = {
@@ -113,6 +128,7 @@ fun AnnouncementCreationScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             AnnouncementTopIntroCard(
+                isEditMode = isEditMode,
                 onBackClick = {
                     navController.popBackStack()
                 }
@@ -151,19 +167,31 @@ fun AnnouncementCreationScreen(
             )
 
             RoundedButton(
-                text = "Create Announcement",
+                text = if (isEditMode) "Save Changes" else "Create Announcement",
                 enabled = isFormValid,
                 onClick = {
-                    createAnnouncement(
-                        courseId = courseId,
-                        title = title,
-                        message = message,
-                        authorName = currentUserName,
-                        context = context,
-                        onSuccess = {
-                            navController.popBackStack()
-                        }
-                    )
+                    if (isEditMode) {
+                        updateAnnouncement(
+                            announcementId = announcementId ?: "",
+                            title = title,
+                            message = message,
+                            context = context,
+                            onSuccess = {
+                                navController.popBackStack()
+                            }
+                        )
+                    } else {
+                        createAnnouncement(
+                            courseId = courseId,
+                            title = title,
+                            message = message,
+                            authorName = currentUserName,
+                            context = context,
+                            onSuccess = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
                 }
             )
         }
@@ -172,6 +200,7 @@ fun AnnouncementCreationScreen(
 
 @Composable
 private fun AnnouncementTopIntroCard(
+    isEditMode: Boolean,
     onBackClick: () -> Unit
 ) {
     Box(
@@ -211,7 +240,7 @@ private fun AnnouncementTopIntroCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = "Create New Announcement",
+                text = if (isEditMode) "Edit Announcement" else "Create New Announcement",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
@@ -220,7 +249,11 @@ private fun AnnouncementTopIntroCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Fill in the details below to add a new course announcement.",
+                text = if (isEditMode) {
+                    "Update the announcement details below."
+                } else {
+                    "Fill in the details below to add a new course announcement."
+                },
                 color = Color.White.copy(alpha = 0.92f),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -275,6 +308,50 @@ fun createAnnouncement(
             Toast.makeText(
                 context,
                 exception.message ?: "Failed to create announcement.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+}
+
+fun updateAnnouncement(
+    announcementId: String,
+    title: String,
+    message: String,
+    context: Context,
+    onSuccess: () -> Unit
+) {
+    if (announcementId.isBlank()) {
+        Toast.makeText(
+            context,
+            "Announcement id is missing.",
+            Toast.LENGTH_SHORT
+        ).show()
+        return
+    }
+
+    FirebaseFirestore.getInstance()
+        .collection("announcements")
+        .document(announcementId)
+        .update(
+            mapOf(
+                "title" to title.trim(),
+                "message" to message.trim(),
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
+        )
+        .addOnSuccessListener {
+            Toast.makeText(
+                context,
+                "Announcement was successfully updated!",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            onSuccess()
+        }
+        .addOnFailureListener { exception ->
+            Toast.makeText(
+                context,
+                exception.message ?: "Failed to update announcement.",
                 Toast.LENGTH_LONG
             ).show()
         }

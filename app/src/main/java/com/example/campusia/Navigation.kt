@@ -37,9 +37,13 @@ import com.example.campusia.screens.ScheduleScreen
 import com.example.campusia.ui.theme.PrimaryPurple
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.campusia.screens.NotificationHistoryScreen
 
 @Composable
-fun Navigation(auth: FirebaseAuth) {
+fun Navigation(auth: FirebaseAuth,
+               initialRoute: String? = null,
+               onInitialRouteConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
 
     var isCheckingSession by remember {
@@ -91,6 +95,15 @@ fun Navigation(auth: FirebaseAuth) {
             )
         }
         return
+    }
+
+    LaunchedEffect(isCheckingSession, initialRoute) {
+        if (!isCheckingSession && !initialRoute.isNullOrBlank() && startDestination != "login_screen") {
+            navController.navigate(initialRoute) {
+                launchSingleTop = true
+            }
+            onInitialRouteConsumed()
+        }
     }
 
     NavHost(
@@ -263,6 +276,26 @@ fun Navigation(auth: FirebaseAuth) {
                 navController = navController,
                 courseId = courseId
             )
+        }
+
+        composable("edit_announcement/{announcementId}/{courseId}") { backStackEntry ->
+            val announcementId =
+                backStackEntry.arguments?.getString("announcementId")
+                    ?: return@composable
+
+            val courseId =
+                backStackEntry.arguments?.getString("courseId")
+                    ?: return@composable
+
+            AnnouncementCreationScreen(
+                navController = navController,
+                courseId = courseId,
+                announcementId = announcementId
+            )
+        }
+
+        composable("notifications_screen") {
+            NotificationHistoryScreen(navController = navController)
         }
     }
 }

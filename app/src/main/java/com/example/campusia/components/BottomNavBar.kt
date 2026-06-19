@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -120,6 +121,24 @@ fun BottomNavBar(
                             popUpTo(navController.graph.startDestinationId)
                             launchSingleTop = true
                             restoreState = true
+                        }
+                    }
+                )
+
+                BottomNavItem(
+                    modifier = Modifier.weight(1f),
+                    label = "Alerts",
+                    selected = selectedItem == "notifications",
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = "Notifications",
+                            modifier = Modifier.size(22.dp)
+                        )
+                    },
+                    onClick = {
+                        navController.navigate("notifications_screen") {
+                            launchSingleTop = true
                         }
                     }
                 )

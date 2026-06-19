@@ -19,9 +19,6 @@ setGlobalOptions({
 const db = getFirestore();
 
 const DAY_MILLIS = 24 * 60 * 60 * 1000;
-const SHORT_DEADLINE_DELAY_MILLIS = 3 * 60 * 1000;
-const GRADE_NOTIFICATION_DELAY_MILLIS = 3 * 60 * 1000;
-const ANNOUNCEMENT_NOTIFICATION_DELAY_MILLIS = 3 * 60 * 1000;
 
 function chunkArray<T>(
     items: T[],
@@ -477,7 +474,7 @@ export const onAssignmentCreated = onDocumentCreated(
         const sendAt =
             isShortDeadline
                 ? Timestamp.fromMillis(
-                    now + SHORT_DEADLINE_DELAY_MILLIS
+                    now
                 )
                 : Timestamp.fromMillis(
                     dueTime - DAY_MILLIS
@@ -555,7 +552,7 @@ export const onAnnouncementCreated = onDocumentCreated(
                 title,
                 message,
                 sendAt: Timestamp.fromMillis(
-                    Date.now() + ANNOUNCEMENT_NOTIFICATION_DELAY_MILLIS
+                    Date.now()
                 ),
                 sent: false,
                 type: "announcement_created",
@@ -624,7 +621,7 @@ export const onSubmissionGradeUpdated = onDocumentUpdated(
                 title: assignmentTitle,
                 gradePercent: afterGrade,
                 sendAt: Timestamp.fromMillis(
-                    Date.now() + GRADE_NOTIFICATION_DELAY_MILLIS
+                    Date.now()
                 ),
                 sent: false,
                 type: "grade_added",

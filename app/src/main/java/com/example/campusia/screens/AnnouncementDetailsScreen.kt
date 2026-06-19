@@ -19,17 +19,25 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +60,7 @@ import com.example.campusia.ui.theme.PrimaryPurpleDark
 import com.example.campusia.ui.theme.ScreenBackground
 import com.example.campusia.ui.theme.TextMuted
 import com.example.campusia.ui.theme.TextPrimary
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -63,9 +72,32 @@ fun AnnouncementDetailsScreen(
 ) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     var announcement by remember {
         mutableStateOf<Announcement?>(null)
+    }
+
+    var currentUserRole by remember {
+        mutableStateOf("")
+    }
+
+    var showDeleteDialog by remember {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotBlank()) {
+            db.collection("users")
+                .document(currentUserId)
+                .get()
+                .addOnSuccessListener { document ->
+                    currentUserRole = document.getString("role") ?: ""
+                }
+                .addOnFailureListener {
+                    currentUserRole = ""
+                }
+        }
     }
 
     DisposableEffect(announcementId) {
@@ -82,13 +114,28 @@ fun AnnouncementDetailsScreen(
                     return@addSnapshotListener
                 }
 
-                announcement = snapshot?.toObject(Announcement::class.java)
+                if (snapshot != null && snapshot.exists()) {
+                    val loadedAnnouncement =
+                        snapshot.toObject(Announcement::class.java)
+
+                    announcement = loadedAnnouncement?.copy(
+                        announcementId = snapshot.id
+                    )
+                } else {
+                    announcement = null
+                }
             }
 
         onDispose {
             listener.remove()
         }
     }
+
+    val normalizedRole = currentUserRole.trim().lowercase()
+
+    val canManageAnnouncement =
+        normalizedRole == "lecturer" &&
+                announcement?.authorId == currentUserId
 
     val formattedSendTime = remember(announcement?.sendTime) {
         announcement?.sendTime?.toDate()?.let { date ->
@@ -97,6 +144,70 @@ fun AnnouncementDetailsScreen(
                 Locale.getDefault()
             ).format(date)
         } ?: "Sending..."
+    }
+
+    if (showDeleteDialog && announcement != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+            title = {
+                Text(
+                    text = "Delete announcement?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete this announcement? This action cannot be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val announcementToDelete = announcement ?: return@TextButton
+
+                        db.collection("announcements")
+                            .document(announcementToDelete.announcementId)
+                            .delete()
+                            .addOnSuccessListener {
+                                showDeleteDialog = false
+
+                                Toast.makeText(
+                                    context,
+                                    "Announcement deleted.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                navController.popBackStack()
+                            }
+                            .addOnFailureListener { exception ->
+                                showDeleteDialog = false
+
+                                Toast.makeText(
+                                    context,
+                                    exception.message ?: "Failed to delete announcement.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                    }
+                ) {
+                    Text(
+                        text = "Delete",
+                        color = Color.Red
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -144,7 +255,7 @@ fun AnnouncementDetailsScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.ArrowBack,
-                                contentDescription = null,
+                                contentDescription = "Back",
                                 tint = Color.White
                             )
                         }
@@ -193,6 +304,64 @@ fun AnnouncementDetailsScreen(
                                 color = Color.White.copy(alpha = .88f),
                                 style = MaterialTheme.typography.bodyMedium
                             )
+                        }
+
+                        if (canManageAnnouncement && announcement != null) {
+                            Spacer(Modifier.height(18.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        val selectedAnnouncement =
+                                            announcement ?: return@Button
+
+                                        navController.navigate(
+                                            "edit_announcement/${selectedAnnouncement.announcementId}/${selectedAnnouncement.courseId}"
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White,
+                                        contentColor = PrimaryPurpleDark
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Edit,
+                                        contentDescription = "Edit announcement",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+
+                                    Spacer(Modifier.width(6.dp))
+
+                                    Text("Edit")
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        showDeleteDialog = true
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Delete,
+                                        contentDescription = "Delete announcement",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = Color.White
+                                    )
+
+                                    Spacer(Modifier.width(6.dp))
+
+                                    Text(
+                                        text = "Delete",
+                                        color = Color.White
+                                    )
+                                }
+                            }
                         }
                     }
                 }
