@@ -74,6 +74,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import com.example.campusia.notifications.FcmTokenManager
 import com.example.campusia.notifications.NotificationPreferences
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import com.google.firebase.auth.EmailAuthProvider
 
 @Composable
 fun ProfileScreen(navController: NavHostController) {
@@ -91,9 +97,17 @@ fun ProfileScreen(navController: NavHostController) {
     var email by remember { mutableStateOf("") }
     var role by remember { mutableStateOf("") }
     var department by remember { mutableStateOf("") }
-    var userId by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmNewPassword by remember { mutableStateOf("") }
+    var isChangingPassword by remember { mutableStateOf(false) }
+
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
+    var deletePassword by remember { mutableStateOf("") }
+    var isDeletingAccount by remember { mutableStateOf(false) }
 
     var notificationsMuted by remember {
         mutableStateOf(
@@ -125,7 +139,6 @@ fun ProfileScreen(navController: NavHostController) {
                 email = document.getString("email") ?: auth.currentUser?.email.orEmpty()
                 role = document.getString("role") ?: ""
                 department = document.getString("department") ?: ""
-                userId = document.getString("userId") ?: currentUserId
                 phoneNumber = document.getString("phoneNumber") ?: ""
                 address = document.getString("address") ?: ""
 
@@ -215,8 +228,7 @@ fun ProfileScreen(navController: NavHostController) {
                     ProfileHeaderCard(
                         firstName = firstName,
                         lastName = lastName,
-                        role = role,
-                        userId = userId
+                        role = role
                     )
 
                     Spacer(modifier = Modifier.height(22.dp))
@@ -316,10 +328,229 @@ fun ProfileScreen(navController: NavHostController) {
                                 },
                                 Toast.LENGTH_SHORT
                             ).show()
+                        },
+                        onChangePasswordClick = {
+                            showChangePasswordDialog = true
+                        },
+                        onDeleteAccountClick = {
+                            showDeleteAccountDialog = true
                         }
                     )
                 }
             }
+        }
+        if (showChangePasswordDialog) {
+            ChangePasswordDialog(
+                currentPassword = currentPassword,
+                onCurrentPasswordChange = {
+                    currentPassword = it
+                },
+                newPassword = newPassword,
+                onNewPasswordChange = {
+                    newPassword = it
+                },
+                confirmNewPassword = confirmNewPassword,
+                onConfirmNewPasswordChange = {
+                    confirmNewPassword = it
+                },
+                isLoading = isChangingPassword,
+                onDismiss = {
+                    if (!isChangingPassword) {
+                        showChangePasswordDialog = false
+                        currentPassword = ""
+                        newPassword = ""
+                        confirmNewPassword = ""
+                    }
+                },
+                onConfirm = {
+                    val user = auth.currentUser
+                    val userEmail = user?.email
+
+                    if (user == null || userEmail.isNullOrBlank()) {
+                        Toast.makeText(
+                            context,
+                            "User is not logged in.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@ChangePasswordDialog
+                    }
+
+                    if (currentPassword.isBlank()) {
+                        Toast.makeText(
+                            context,
+                            "Enter your current password.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@ChangePasswordDialog
+                    }
+
+                    if (newPassword.length < 6) {
+                        Toast.makeText(
+                            context,
+                            "New password must have at least 6 characters.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@ChangePasswordDialog
+                    }
+
+                    if (newPassword != confirmNewPassword) {
+                        Toast.makeText(
+                            context,
+                            "New passwords do not match.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@ChangePasswordDialog
+                    }
+
+                    isChangingPassword = true
+
+                    val credential =
+                        EmailAuthProvider.getCredential(
+                            userEmail,
+                            currentPassword
+                        )
+
+                    user.reauthenticate(credential)
+                        .addOnSuccessListener {
+                            user.updatePassword(newPassword)
+                                .addOnSuccessListener {
+                                    isChangingPassword = false
+                                    showChangePasswordDialog = false
+                                    currentPassword = ""
+                                    newPassword = ""
+                                    confirmNewPassword = ""
+
+                                    Toast.makeText(
+                                        context,
+                                        "Password changed successfully.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                .addOnFailureListener { exception ->
+                                    isChangingPassword = false
+
+                                    Toast.makeText(
+                                        context,
+                                        "Password change error: ${exception.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                        }
+                        .addOnFailureListener {
+                            isChangingPassword = false
+
+                            Toast.makeText(
+                                context,
+                                "Current password is incorrect.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                }
+            )
+        }
+
+        if (showDeleteAccountDialog) {
+            DeleteAccountDialog(
+                password = deletePassword,
+                onPasswordChange = {
+                    deletePassword = it
+                },
+                isLoading = isDeletingAccount,
+                onDismiss = {
+                    if (!isDeletingAccount) {
+                        showDeleteAccountDialog = false
+                        deletePassword = ""
+                    }
+                },
+                onConfirm = {
+                    val user = auth.currentUser
+                    val userEmail = user?.email
+                    val uid = user?.uid
+
+                    if (user == null || userEmail.isNullOrBlank() || uid.isNullOrBlank()) {
+                        Toast.makeText(
+                            context,
+                            "User is not logged in.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@DeleteAccountDialog
+                    }
+
+                    if (deletePassword.isBlank()) {
+                        Toast.makeText(
+                            context,
+                            "Enter your password to delete account.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@DeleteAccountDialog
+                    }
+
+                    isDeletingAccount = true
+
+                    val credential =
+                        EmailAuthProvider.getCredential(
+                            userEmail,
+                            deletePassword
+                        )
+
+                    user.reauthenticate(credential)
+                        .addOnSuccessListener {
+                            FcmTokenManager.removeCurrentTokenFromLoggedUser {
+                                db.collection("users")
+                                    .document(uid)
+                                    .delete()
+                                    .addOnSuccessListener {
+                                        user.delete()
+                                            .addOnSuccessListener {
+                                                isDeletingAccount = false
+                                                showDeleteAccountDialog = false
+                                                deletePassword = ""
+
+                                                Toast.makeText(
+                                                    context,
+                                                    "Account deleted successfully.",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+
+                                                navController.navigate("login_screen") {
+                                                    popUpTo(0) {
+                                                        inclusive = true
+                                                    }
+                                                    launchSingleTop = true
+                                                }
+                                            }
+                                            .addOnFailureListener { exception ->
+                                                isDeletingAccount = false
+
+                                                Toast.makeText(
+                                                    context,
+                                                    "Account deletion error: ${exception.message}",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                    }
+                                    .addOnFailureListener { exception ->
+                                        isDeletingAccount = false
+
+                                        Toast.makeText(
+                                            context,
+                                            "Could not delete user data: ${exception.message}",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                            }
+                        }
+                        .addOnFailureListener {
+                            isDeletingAccount = false
+
+                            Toast.makeText(
+                                context,
+                                "Password is incorrect.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                }
+            )
         }
     }
 }
@@ -359,10 +590,6 @@ private fun ProfileTopBar(
                         launchSingleTop = true
                     }
                 }
-                navController.navigate("login_screen") {
-                    popUpTo(0) { inclusive = true }
-                    launchSingleTop = true
-                }
             }
         ) {
             Icon(
@@ -379,13 +606,11 @@ private fun ProfileTopBar(
 private fun ProfileHeaderCard(
     firstName: String,
     lastName: String,
-    role: String,
-    userId: String
+    role: String
 ) {
     val fullName = buildFullName(firstName, lastName)
     val initials = buildInitials(firstName, lastName)
     val displayedRole = role.ifBlank { "User" }
-    val displayedUserId = userId.ifBlank { "No user ID" }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -433,14 +658,6 @@ private fun ProfileHeaderCard(
                 text = displayedRole,
                 color = TextMuted,
                 fontSize = 14.sp
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = displayedUserId,
-                color = TextMuted,
-                fontSize = 13.sp
             )
         }
     }
@@ -673,7 +890,9 @@ private fun ProfileInputField(
 @Composable
 private fun AccountSettingsCard(
     notificationsMuted: Boolean,
-    onNotificationsMutedChange: (Boolean) -> Unit
+    onNotificationsMutedChange: (Boolean) -> Unit,
+    onChangePasswordClick: () -> Unit,
+    onDeleteAccountClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -718,21 +937,7 @@ private fun AccountSettingsCard(
                         contentDescription = "Change Password"
                     )
                 },
-                onClick = { }
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            AccountSettingsButton(
-                text = "Privacy Settings",
-                textColor = TextDark,
-                icon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Person,
-                        contentDescription = "Privacy Settings"
-                    )
-                },
-                onClick = { }
+                onClick = onChangePasswordClick
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -746,7 +951,7 @@ private fun AccountSettingsCard(
                         contentDescription = "Delete Account"
                     )
                 },
-                onClick = { }
+                onClick = onDeleteAccountClick
             )
         }
     }
@@ -799,6 +1004,193 @@ private fun AccountSettingsButton(
                 fontWeight = FontWeight.Medium
             )
         }
+    }
+}
+
+@Composable
+private fun ChangePasswordDialog(
+    currentPassword: String,
+    onCurrentPasswordChange: (String) -> Unit,
+    newPassword: String,
+    onNewPasswordChange: (String) -> Unit,
+    confirmNewPassword: String,
+    onConfirmNewPasswordChange: (String) -> Unit,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Change Password",
+                color = TextDark,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Enter your current password and choose a new one.",
+                    color = TextMuted,
+                    fontSize = 14.sp
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                PasswordInputField(
+                    label = "Current Password",
+                    value = currentPassword,
+                    onValueChange = onCurrentPasswordChange
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                PasswordInputField(
+                    label = "New Password",
+                    value = newPassword,
+                    onValueChange = onNewPasswordChange
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                PasswordInputField(
+                    label = "Confirm New Password",
+                    value = confirmNewPassword,
+                    onValueChange = onConfirmNewPasswordChange
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = !isLoading
+            ) {
+                Text(
+                    text = if (isLoading) "Saving..." else "Save",
+                    color = PrimaryPurple,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isLoading
+            ) {
+                Text(
+                    text = "Cancel",
+                    color = TextDark
+                )
+            }
+        },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = Color.White
+    )
+}
+
+@Composable
+private fun DeleteAccountDialog(
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Delete Account",
+                color = DangerRed,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "This action cannot be undone. Enter your password to confirm account deletion.",
+                    color = TextMuted,
+                    fontSize = 14.sp
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                PasswordInputField(
+                    label = "Password",
+                    value = password,
+                    onValueChange = onPasswordChange
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = !isLoading
+            ) {
+                Text(
+                    text = if (isLoading) "Deleting..." else "Delete",
+                    color = DangerRed,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isLoading
+            ) {
+                Text(
+                    text = "Cancel",
+                    color = TextDark
+                )
+            }
+        },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = Color.White
+    )
+}
+
+@Composable
+private fun PasswordInputField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = label,
+            color = TextDark,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = PrimaryPurple,
+                unfocusedBorderColor = FieldBorder,
+                focusedContainerColor = FieldBackground,
+                unfocusedContainerColor = FieldBackground,
+                cursorColor = PrimaryPurple,
+                focusedTextColor = TextDark,
+                unfocusedTextColor = TextDark
+            )
+        )
     }
 }
 
