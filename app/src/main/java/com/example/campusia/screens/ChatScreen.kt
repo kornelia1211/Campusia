@@ -226,54 +226,7 @@ fun ChatScreen(
     }
 
     Scaffold(
-        containerColor = ScreenBackground,
-        topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                PrimaryPurple,
-                                PrimaryPurpleDark
-                            )
-                        )
-                    )
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 18.dp)
-            ) {
-                Column {
-                    IconButton(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier
-                            .size(38.dp)
-                            .background(
-                                color = Color.White.copy(alpha = 0.25f),
-                                shape = CircleShape
-                            ),
-                        colors = IconButtonDefaults.iconButtonColors(
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Text(
-                        text = chatTitle,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
+        containerColor = ScreenBackground
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -289,6 +242,53 @@ fun ChatScreen(
                 contentPadding = PaddingValues(10.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                item {
+                    Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    PrimaryPurple,
+                                    PrimaryPurpleDark
+                                )
+                            )
+                        )
+                        .padding(horizontal = 16.dp, vertical = 18.dp)
+                ) {
+                    Column {
+                        IconButton(
+                            onClick = { navController.popBackStack() },
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(
+                                    color = Color.White.copy(alpha = 0.25f),
+                                    shape = CircleShape
+                                ),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = chatTitle,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+
                 items(messages) { message ->
                     MessageItem(
                         message = message,

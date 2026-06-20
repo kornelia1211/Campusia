@@ -64,6 +64,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.IconButton
 
 private data class ChatUserSuggestion(
@@ -565,15 +566,26 @@ fun ChatListScreen(
 
     Scaffold(
         containerColor = ScreenBackground,
-        topBar = {
+        bottomBar = {
+            BottomNavBar(
+                navController = navController,
+                selectedItem = "chat"
+            )
+        }
+    ) { paddingValues ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(ScreenBackground)
+                .padding(10.dp)
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(
-                        RoundedCornerShape(
-                            bottomStart = 24.dp,
-                            bottomEnd = 24.dp
-                        )
+                        RoundedCornerShape(24.dp)
                     )
                     .background(
                         brush = Brush.horizontalGradient(
@@ -592,22 +604,7 @@ fun ChatListScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
-        },
-        bottomBar = {
-            BottomNavBar(
-                navController = navController,
-                selectedItem = "chat"
-            )
-        }
-    ) { paddingValues ->
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(ScreenBackground)
-                .padding(10.dp)
-        ) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
@@ -697,7 +694,21 @@ fun ChatListScreen(
                     },
                     label = {
                         Text("Course Chat")
-                    }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color.White.copy(alpha = 0.5f),
+                        labelColor = HeaderTextColor,
+                        selectedContainerColor = AccentPurple.copy(alpha = 0.12f),
+                        selectedLabelColor = AccentPurpleDark
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isCourseSelected,
+                        borderColor = SearchBorder,
+                        selectedBorderColor = AccentPurple,
+                        borderWidth = 1.dp
+                    )
                 )
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -710,7 +721,22 @@ fun ChatListScreen(
                     },
                     label = {
                         Text("Private Chat")
-                    }
+                    },
+
+                    shape = RoundedCornerShape(12.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color.White.copy(alpha = 0.5f),
+                        labelColor = HeaderTextColor,
+                        selectedContainerColor = AccentPurple.copy(alpha = 0.12f),
+                        selectedLabelColor = AccentPurpleDark
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isCourseSelected,
+                        borderColor = SearchBorder,
+                        selectedBorderColor = AccentPurple,
+                        borderWidth = 1.dp
+                    )
                 )
             }
 
