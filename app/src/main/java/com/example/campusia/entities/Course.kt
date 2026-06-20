@@ -18,6 +18,7 @@ data class Course(
     val enrolledStudents: Int = 0,
     val maxStudents: Int = 10,
     val lecturerIds: List<String> = emptyList(),
+    val lecturerNames: List<String> = emptyList(),
     val studentIds: List<String> = emptyList(),
     val schedule: CourseSchedule = CourseSchedule()
 )

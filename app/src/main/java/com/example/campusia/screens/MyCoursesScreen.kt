@@ -3,7 +3,10 @@ package com.example.campusia.screens
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,6 +44,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -51,18 +57,20 @@ import com.example.campusia.components.BottomNavBar
 import com.example.campusia.components.CourseCard
 import com.example.campusia.entities.Course
 import com.example.campusia.entities.UserRole
+import com.example.campusia.ui.theme.PrimaryPurple
+import com.example.campusia.ui.theme.PrimaryPurpleDark
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
 private val ScreenBackground = Color(0xFFF8F7FB)
-private val HeaderTextColor = Color(0xFF1F1F29)
+val HeaderTextColor = Color(0xFF1F1F29)
 private val SubtitleTextColor = Color(0xFF8A8A98)
-private val AccentPurple = Color(0xFFA78BFA)
-private val AccentPurpleDark = Color(0xFF8B5CF6)
+val AccentPurple = Color(0xFFA78BFA)
+val AccentPurpleDark = Color(0xFF8B5CF6)
 private val SearchBackground = Color.White
-private val SearchBorder = Color(0xFFE7E2F3)
+val SearchBorder = Color(0xFFE7E2F3)
 private val EmptyCardBackground = Color.White
 
 @Composable
@@ -70,6 +78,7 @@ fun MyCoursesScreen(navController: NavHostController) {
     val role = SessionManager.userRole
     var courses by remember { mutableStateOf<List<Course>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
+    var showOnlyEnrolled by remember { mutableStateOf(false) }
 
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
@@ -78,10 +87,10 @@ fun MyCoursesScreen(navController: NavHostController) {
     var courseToDelete by remember {
         mutableStateOf<Course?>(null)
     }
+    val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
-    LaunchedEffect(Unit) {
-
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isBlank()) return@LaunchedEffect
 
         val query = when (role) {
 
@@ -121,8 +130,21 @@ fun MyCoursesScreen(navController: NavHostController) {
     }
 
     val filteredCourses = courses.filter { course ->
-        course.title.contains(searchQuery.trim(), ignoreCase = true)
-    }
+        val query = searchQuery.trim()
+        val matchesTitle = course.title.contains(searchQuery.trim(), ignoreCase = true)
+        val matchesDepartment = course.department.contains(query, ignoreCase = true)
+        val matchesLecturer = course.lecturerNames.any { name ->
+            name.contains(query, ignoreCase = true)
+        }
+
+        matchesTitle || matchesDepartment || matchesLecturer
+    }.filter { course ->
+        if (showOnlyEnrolled) {
+            course.studentIds.contains(currentUserId)
+        } else {
+            true
+        }
+    }.sortedBy { it.title.lowercase() }
 
     Scaffold(
         containerColor = ScreenBackground,
@@ -140,28 +162,30 @@ fun MyCoursesScreen(navController: NavHostController) {
                 .padding(paddingValues)
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 18.dp, vertical = 12.dp)
+                .padding(16.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                PrimaryPurple,
+                                PrimaryPurpleDark
+                            )
+                        )
+                    )
             ) {
                 Column(
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.padding(18.dp)
                 ) {
                     Text(
                         text = "My Courses",
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            color = HeaderTextColor
+                            color = Color.White
                         )
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = role.name
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -173,38 +197,38 @@ fun MyCoursesScreen(navController: NavHostController) {
                             "Manage your teaching courses"
                         },
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = SubtitleTextColor
+                            color = Color.White
                         )
                     )
                 }
+            }
 
-                if (role != UserRole.STUDENT) {
-                    Spacer(modifier = Modifier.width(12.dp))
+            if (role != UserRole.STUDENT) {
+                Spacer(modifier = Modifier.height(6.dp))
 
-                    TextButton(
-                        onClick = { navController.navigate("course_creation") },
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier
-                            .height(46.dp)
-                            .background(
-                                color = AccentPurple,
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription = "Add course",
-                            tint = Color.White
+                TextButton(
+                    onClick = { navController.navigate("course_creation") },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .height(46.dp)
+                        .background(
+                            color = AccentPurple,
+                            shape = RoundedCornerShape(16.dp)
                         )
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = "Add course",
+                        tint = Color.White
+                    )
 
-                        Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
 
-                        Text(
-                            text = "New Course",
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    Text(
+                        text = "New Course",
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 
@@ -218,7 +242,7 @@ fun MyCoursesScreen(navController: NavHostController) {
                 shape = RoundedCornerShape(18.dp),
                 placeholder = {
                     Text(
-                        text = "Search by course name",
+                        text = "Search by course name, lecturer or department",
                         color = SubtitleTextColor
                     )
                 },
@@ -238,6 +262,28 @@ fun MyCoursesScreen(navController: NavHostController) {
                     cursorColor = AccentPurpleDark
                 )
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (showOnlyEnrolled) AccentPurple.copy(alpha = 0.15f) else Color.Transparent)
+                    .border(
+                        width = 1.dp,
+                        color = if (showOnlyEnrolled) AccentPurple else SearchBorder,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .clickable { showOnlyEnrolled = !showOnlyEnrolled }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Enrolled Only",
+                    color = if (showOnlyEnrolled) AccentPurpleDark else HeaderTextColor,
+                    fontWeight = if (showOnlyEnrolled) FontWeight.Bold else FontWeight.Medium
+                )
+            }
 
             Spacer(modifier = Modifier.height(18.dp))
 

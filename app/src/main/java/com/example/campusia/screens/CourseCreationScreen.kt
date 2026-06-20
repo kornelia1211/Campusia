@@ -599,6 +599,16 @@ fun CourseCreationScreen(
 
                 val lecturersList = selectedLecturers.map { it.userId }
 
+                val allLecturerIds = if (SessionManager.userRole == UserRole.LECTURER) {
+                    (lecturersList + (currentUserId ?: "")).distinct()
+                } else {
+                    lecturersList.distinct()
+                }
+
+                val finalLecturerNames = users.filter { it.userId in allLecturerIds }.map { user ->
+                    "${user.firstName} ${user.lastName}".trim()
+                }
+
                 val scheduleObject = CourseSchedule(
                     dayOfWeek = selectedDay!!,
                     frequency = selectedFrequency!!,
@@ -617,6 +627,7 @@ fun CourseCreationScreen(
                         schedule = scheduleObject,
                         maxStudents = maxStudentsInt,
                         providedLecturerIds = lecturersList,
+                        lecturerNames = finalLecturerNames,
                         context = context,
                         onSuccess = {
                             navController.navigate("courses_screen")
@@ -633,6 +644,7 @@ fun CourseCreationScreen(
                         schedule = scheduleObject,
                         maxStudents = maxStudentsInt,
                         lecturerIds = lecturersList,
+                        lecturerNames = finalLecturerNames,
                         studentIds = editingCourse.studentIds,
                         enrolledStudents = editingCourse.enrolledStudents,
                         context = context,
@@ -771,6 +783,7 @@ fun createCourse(
     schedule: CourseSchedule,
     maxStudents: Int,
     providedLecturerIds: List<String> = emptyList(),
+    lecturerNames: List<String>,
     context: Context,
     onSuccess: () -> Unit
 ) {
@@ -803,6 +816,7 @@ fun createCourse(
         department = department,
         maxStudents = maxStudents,
         lecturerIds = finalLecturerIds,
+        lecturerNames = lecturerNames,
         schedule = schedule
     )
 
@@ -832,6 +846,7 @@ fun updateCourse(
     schedule: CourseSchedule,
     maxStudents: Int,
     lecturerIds: List<String>,
+    lecturerNames: List<String>,
     studentIds: List<String>,
     enrolledStudents: Int,
     context: Context,
@@ -864,6 +879,7 @@ fun updateCourse(
         department = department,
         maxStudents = maxStudents,
         lecturerIds = finalLecturerIds,
+        lecturerNames = lecturerNames,
         studentIds = studentIds,
         enrolledStudents = enrolledStudents,
         schedule = schedule
