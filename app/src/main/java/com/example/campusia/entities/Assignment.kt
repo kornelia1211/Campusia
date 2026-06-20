@@ -9,5 +9,6 @@ data class Assignment(
     val title: String = "",
     val description: String = "",
     val dueDate: Timestamp? = null,
-    val materials: List<AssignmentMaterial> = emptyList()
+    val materials: List<AssignmentMaterial> = emptyList(),
+    val submittedBy: List<String> = emptyList()
 )

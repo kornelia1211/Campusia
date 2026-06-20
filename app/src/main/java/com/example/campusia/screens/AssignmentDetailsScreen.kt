@@ -59,6 +59,7 @@ import androidx.navigation.NavHostController
 import com.example.campusia.components.BottomNavBar
 import com.example.campusia.components.UploadMaterialsCard
 import com.example.campusia.entities.Assignment
+import com.example.campusia.entities.Course
 import com.example.campusia.ui.theme.FieldBackground
 import com.example.campusia.ui.theme.FieldBorder
 import com.example.campusia.ui.theme.PrimaryPurple
@@ -114,6 +115,7 @@ fun AssignmentDetailsScreen(
     var studentSubmission by remember { mutableStateOf<AssignmentSubmission?>(null) }
     var allSubmissions by remember { mutableStateOf<List<AssignmentSubmission>>(emptyList()) }
     var isUploading by remember { mutableStateOf(false) }
+    var course by remember { mutableStateOf<Course?>(null) }
 
     val normalizedUserRole = userRole.trim().lowercase()
     val isStaff = normalizedUserRole == "lecturer" || normalizedUserRole == "admin"
@@ -202,6 +204,16 @@ fun AssignmentDetailsScreen(
 
                     assignment =
                         snapshot?.toObject(Assignment::class.java)
+
+                    val courseId = assignment?.courseId
+                    if (!courseId.isNullOrBlank() && course == null) {
+                        db.collection("courses")
+                            .document(courseId)
+                            .get()
+                            .addOnSuccessListener { courseSnapshot ->
+                                course = courseSnapshot.toObject(Course::class.java)
+                            }
+                    }
                 }
 
         onDispose {
@@ -624,6 +636,18 @@ fun AssignmentDetailsScreen(
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
+                            )
+
+                            Spacer(Modifier.height(18.dp))
+
+                            val submissionsCount = assignment?.submittedBy?.size ?: 0
+                            val totalStudents = course?.studentIds?.size ?: 0
+
+                            Text(
+                                text = "Total submissions: $submissionsCount / $totalStudents",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = PrimaryPurpleDark,
+                                fontWeight = FontWeight.SemiBold
                             )
 
                             Spacer(Modifier.height(18.dp))
@@ -1074,8 +1098,17 @@ private fun saveSubmissionToFirestore(
             SetOptions.merge()
         )
         .addOnSuccessListener {
-            onUploadingChange(false)
-            onSuccess(isLate)
+            db.collection("assignments")
+                .document(assignmentId)
+                .update("submittedBy", FieldValue.arrayUnion(studentId))
+                .addOnSuccessListener {
+                    onUploadingChange(false)
+                    onSuccess(isLate)
+                }
+                .addOnFailureListener { exception ->
+                    onUploadingChange(false)
+                    onSuccess(isLate)
+                }
         }
         .addOnFailureListener { exception ->
             onUploadingChange(false)

@@ -39,7 +39,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,7 +75,9 @@ import com.example.campusia.ui.theme.DangerRed
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.outlined.CoPresent
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Scaffold
 import com.example.campusia.entities.Announcement
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -98,6 +99,10 @@ fun CourseDetailsScreen(
         mutableStateOf<List<User>>(emptyList())
     }
 
+    var lecturers by remember {
+        mutableStateOf<List<User>>(emptyList())
+    }
+
     var assignments by remember { mutableStateOf<List<Assignment>>(emptyList()) }
 
     var announcements by remember {
@@ -112,6 +117,15 @@ fun CourseDetailsScreen(
 
     val previewAssignments = assignments.take(3)
     val previewAnnouncements = announcements.take(3)
+
+    val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+    val isUserAuthorized = remember(course, role, currentUserId) {
+        if (role == UserRole.LECTURER || role == UserRole.ADMIN) {
+            true
+        } else {
+            course?.studentIds?.contains(currentUserId) ?: false
+        }
+    }
 
     DisposableEffect(courseId, role) {
 
@@ -156,6 +170,29 @@ fun CourseDetailsScreen(
                                 ).show()
                             }
                     }
+
+                    val lecturerIds =
+                        fetchedCourse?.lecturerIds.orEmpty()
+
+                    if (lecturerIds.isEmpty()) {
+                        lecturers = emptyList()
+                    } else {
+                        db.collection("users")
+                            .whereIn("userId", lecturerIds)
+                            .get()
+                            .addOnSuccessListener { result ->
+                                lecturers =
+                                    result.toObjects(User::class.java)
+                            }
+                            .addOnFailureListener { exception ->
+                                Toast.makeText(
+                                    context,
+                                    "Lecturers loading error: ${exception.localizedMessage}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                    }
+
                 }
 
         val assignmentsListener =
@@ -231,376 +268,423 @@ fun CourseDetailsScreen(
         }
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(ScreenBackground)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    Scaffold(
+        containerColor = ScreenBackground
+    ) { paddingValues ->
 
-        item {
-            HeaderCard(
-                onBackClick = {
-                    navController.navigate("courses_screen") {
-                        popUpTo("courses_screen") {
-                            inclusive = false
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(ScreenBackground)
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+
+            item {
+                HeaderCard(
+                    onBackClick = {
+                        navController.navigate("courses_screen") {
+                            popUpTo("courses_screen") {
+                                inclusive = false
+                            }
+                            launchSingleTop = true
                         }
-                        launchSingleTop = true
+                    }
+                )
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    if (role == UserRole.LECTURER || role == UserRole.ADMIN){
+                        RoundedButton(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Add,
+                            text = "Assignment",
+                            height = 40.dp,
+                            fontSize = 13.sp,
+                            iconSize = 17.dp,
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            onClick = {
+                                navController.navigate("assignment_creation_screen/$courseId")
+                            }
+                        )
+                        RoundedButton(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Campaign,
+                            text = "Announce",
+                            height = 40.dp,
+                            fontSize = 13.sp,
+                            iconSize = 17.dp,
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            onClick = {
+                                navController.navigate("announcement_creation_screen/$courseId")
+                            }
+                        )
+                    }
+                }
+            }
+
+            item {
+                SectionCard(
+                    title = "Basic Information"
+                ) {
+                    DetailRow(
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.MenuBook,
+                                contentDescription = "Title",
+                                tint = PrimaryPurpleDark,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        label = "Title",
+                        value = course?.title ?: ""
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    DetailRow(
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Description,
+                                contentDescription = "Description",
+                                tint = PrimaryPurpleDark,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        label = "Description",
+                        value = course?.description ?: ""
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    DetailRow(
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Business,
+                                contentDescription = "Department",
+                                tint = PrimaryPurpleDark,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        label = "Department",
+                        value = course?.department ?: ""
+                    )
+                }
+            }
+
+            if (isUserAuthorized) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                1.dp,
+                                FieldBorder,
+                                RoundedCornerShape(24.dp)
+                            ),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = FieldBackground
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp)
+                        ) {
+                            Text(
+                                text = "Course Announcements",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            if (announcements.isEmpty()) {
+                                Text(
+                                    text = "No announcements yet.",
+                                    color = TextMuted
+                                )
+                            } else {
+                                previewAnnouncements.forEachIndexed { index, announcement ->
+                                    CourseAnnouncementItem(
+                                        announcement = announcement,
+                                        onClick = {
+                                            navController.navigate(
+                                                "announcement_details_screen/${announcement.announcementId}"
+                                            )
+                                        }
+                                    )
+
+                                    if (index != previewAnnouncements.lastIndex) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                    }
+                                }
+
+                                if (announcements.size > previewAnnouncements.size) {
+                                    Spacer(modifier = Modifier.height(14.dp))
+
+                                    RoundedButton(
+                                        text = "View all announcements",
+                                        height = 44.dp,
+                                        fontSize = 14.sp,
+                                        onClick = {
+                                            navController.navigate(
+                                                "course_announcements_screen/$courseId"
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (isUserAuthorized) {
+                item {
+                    SectionCard(title = "Course Assignments") {
+                        if (assignments.isEmpty()) {
+                            Text(
+                                text = "No assignments assigned yet.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextMuted
+                            )
+                        } else {
+                            previewAssignments.forEachIndexed { index, assignment ->
+                                CourseStyleAssignmentCard(
+                                    assignment = assignment,
+                                    role = role,
+                                    onClick = {
+                                        navController.navigate(
+                                            "assignment_details/${assignment.assignmentId}"
+                                        )
+                                    },
+                                    onEdit = {
+                                        navController.navigate(
+                                            "edit_assignment/${assignment.assignmentId}/$courseId"
+                                        )
+                                    },
+                                    onDelete = {
+                                        FirebaseFirestore
+                                            .getInstance()
+                                            .collection("assignments")
+                                            .document(assignment.assignmentId)
+                                            .delete()
+                                            .addOnSuccessListener {
+                                                assignments =
+                                                    assignments.filterNot {
+                                                        it.assignmentId == assignment.assignmentId
+                                                    }
+                                            }
+                                    }
+                                )
+
+                                if (index != previewAssignments.lastIndex) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+                            }
+
+                            if (assignments.size > previewAssignments.size) {
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                RoundedButton(
+                                    text = "View all assignments",
+                                    height = 44.dp,
+                                    fontSize = 14.sp,
+                                    onClick = {
+                                        navController.navigate(
+                                            "course_assignments_screen/$courseId"
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            item {
+                SectionCard(
+                    title = "Schedule"
+                ) {
+                    DetailRow(
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarMonth,
+                                contentDescription = "Day",
+                                tint = PrimaryPurpleDark,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        label = "Day of week",
+                        value = course?.schedule?.dayOfWeek?.name ?: ""
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    DetailRow(
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Schedule,
+                                contentDescription = "Time",
+                                tint = PrimaryPurpleDark,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        label = "Time",
+                        value = "${course?.schedule?.startTime ?: ""} - ${course?.schedule?.endTime ?: ""}"
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    DetailRow(
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.LocationOn,
+                                contentDescription = "Room",
+                                tint = PrimaryPurpleDark,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        label = "Room",
+                        value = course?.schedule?.room ?: ""
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    DetailRow(
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Business,
+                                contentDescription = "Building",
+                                tint = PrimaryPurpleDark,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        label = "Building",
+                        value = course?.schedule?.building ?: ""
+                    )
+                }
+            }
+
+            item {
+                SectionCard(
+                    title = "Enrolled Students"
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconCircleBox(
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Groups,
+                                    contentDescription = "Students",
+                                    tint = PrimaryPurpleDark,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.width(10.dp))
+
+                        Text(
+                            text = "Students",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    students.sortedBy { it.lastName }.forEachIndexed { index, student ->
+
+                        StudentCard(
+                            student = student,
+                            role = role,
+                            onDeleteClick = {
+                                studentToRemove = student
+                            }
+                        )
+
+                        if (index != students.lastIndex) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                    }
+                }
+            }
+
+            item {
+                SectionCard(
+                    title = "Lecturers"
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconCircleBox(
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.CoPresent,
+                                    contentDescription = "Lecturers",
+                                    tint = PrimaryPurpleDark,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.width(10.dp))
+
+                        Text(
+                            text = "Lecturers",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    lecturers.sortedBy { it.lastName }.forEachIndexed { index, lecturer ->
+
+                        LecturerCard(
+                            lecturer = lecturer
+                        )
+                    }
+                }
+            }
+        }
+
+        studentToRemove?.let { student ->
+            AlertDialogDelete(
+                message = "Are you sure you want to remove the student \"${student.firstName} ${student.lastName}\" from this course?",
+                onDismiss = { studentToRemove = null },
+                onConfirm = {
+                    val docRef = db.collection("courses").document(courseId)
+
+                    docRef.update(
+                        "studentIds", FieldValue.arrayRemove(student.userId),
+                        "enrolledStudents", FieldValue.increment(-1)
+                    ).addOnSuccessListener {
+                        db.collection("chat_rooms").document(courseId)
+                            .update("participants", FieldValue.arrayRemove(student.userId))
+                            .addOnSuccessListener {
+                                Toast.makeText(context, "Student removed from course and chat", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "Student removed from course list", Toast.LENGTH_SHORT).show()
+                            }
+                    }.addOnFailureListener {
+                        Toast.makeText(context, "Failed to remove student", Toast.LENGTH_SHORT).show()
                     }
                 }
             )
         }
-
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                if (role == UserRole.LECTURER || role == UserRole.ADMIN){
-                    RoundedButton(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Add,
-                        text = "Assignment",
-                        height = 40.dp,
-                        fontSize = 13.sp,
-                        iconSize = 17.dp,
-                        contentPadding = PaddingValues(horizontal = 4.dp),
-                        onClick = {
-                            navController.navigate("assignment_creation_screen/$courseId")
-                        }
-                    )
-                    RoundedButton(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Campaign,
-                        text = "Announce",
-                        height = 40.dp,
-                        fontSize = 13.sp,
-                        iconSize = 17.dp,
-                        contentPadding = PaddingValues(horizontal = 4.dp),
-                        onClick = {
-                            navController.navigate("announcement_creation_screen/$courseId")
-                        }
-                    )
-                }
-            }
-        }
-
-        item {
-            SectionCard(
-                title = "Basic Information"
-            ) {
-                DetailRow(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.MenuBook,
-                            contentDescription = "Title",
-                            tint = PrimaryPurpleDark,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    label = "Title",
-                    value = course?.title ?: ""
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                DetailRow(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Description,
-                            contentDescription = "Description",
-                            tint = PrimaryPurpleDark,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    label = "Description",
-                    value = course?.description ?: ""
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                DetailRow(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Business,
-                            contentDescription = "Department",
-                            tint = PrimaryPurpleDark,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    label = "Department",
-                    value = course?.department ?: ""
-                )
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        1.dp,
-                        FieldBorder,
-                        RoundedCornerShape(24.dp)
-                    ),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = FieldBackground
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
-                    Text(
-                        text = "Course Announcements",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    if (announcements.isEmpty()) {
-                        Text(
-                            text = "No announcements yet.",
-                            color = TextMuted
-                        )
-                    } else {
-                        previewAnnouncements.forEachIndexed { index, announcement ->
-                            CourseAnnouncementItem(
-                                announcement = announcement,
-                                onClick = {
-                                    navController.navigate(
-                                        "announcement_details_screen/${announcement.announcementId}"
-                                    )
-                                }
-                            )
-
-                            if (index != previewAnnouncements.lastIndex) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                            }
-                        }
-
-                        if (announcements.size > previewAnnouncements.size) {
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            RoundedButton(
-                                text = "View all announcements",
-                                height = 44.dp,
-                                fontSize = 14.sp,
-                                onClick = {
-                                    navController.navigate(
-                                        "course_announcements_screen/$courseId"
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            SectionCard(title = "Course Assignments") {
-                if (assignments.isEmpty()) {
-                    Text(
-                        text = "No assignments assigned yet.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted
-                    )
-                } else {
-                    previewAssignments.forEachIndexed { index, assignment ->
-                        CourseStyleAssignmentCard(
-                            assignment = assignment,
-                            role = role,
-                            onClick = {
-                                navController.navigate(
-                                    "assignment_details/${assignment.assignmentId}"
-                                )
-                            },
-                            onEdit = {
-                                navController.navigate(
-                                    "edit_assignment/${assignment.assignmentId}/$courseId"
-                                )
-                            },
-                            onDelete = {
-                                FirebaseFirestore
-                                    .getInstance()
-                                    .collection("assignments")
-                                    .document(assignment.assignmentId)
-                                    .delete()
-                                    .addOnSuccessListener {
-                                        assignments =
-                                            assignments.filterNot {
-                                                it.assignmentId == assignment.assignmentId
-                                            }
-                                    }
-                            }
-                        )
-
-                        if (index != previewAssignments.lastIndex) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                    }
-
-                    if (assignments.size > previewAssignments.size) {
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        RoundedButton(
-                            text = "View all assignments",
-                            height = 44.dp,
-                            fontSize = 14.sp,
-                            onClick = {
-                                navController.navigate(
-                                    "course_assignments_screen/$courseId"
-                                )
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
-
-        item {
-            SectionCard(
-                title = "Schedule"
-            ) {
-                DetailRow(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.CalendarMonth,
-                            contentDescription = "Day",
-                            tint = PrimaryPurpleDark,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    label = "Day of week",
-                    value = course?.schedule?.dayOfWeek?.name ?: ""
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                DetailRow(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Schedule,
-                            contentDescription = "Time",
-                            tint = PrimaryPurpleDark,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    label = "Time",
-                    value = "${course?.schedule?.startTime ?: ""} - ${course?.schedule?.endTime ?: ""}"
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                DetailRow(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.LocationOn,
-                            contentDescription = "Room",
-                            tint = PrimaryPurpleDark,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    label = "Room",
-                    value = course?.schedule?.room ?: ""
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                DetailRow(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Business,
-                            contentDescription = "Building",
-                            tint = PrimaryPurpleDark,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    label = "Building",
-                    value = course?.schedule?.building ?: ""
-                )
-            }
-        }
-
-        item {
-            SectionCard(
-                title = "Enrolled Students"
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconCircleBox(
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Groups,
-                                contentDescription = "Students",
-                                tint = PrimaryPurpleDark,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Text(
-                        text = "Students",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                students.forEachIndexed { index, student ->
-
-                    StudentCard(
-                        student = student,
-                        role = role,
-                        onDeleteClick = {
-                            studentToRemove = student
-                        }
-                    )
-
-                    if (index != students.lastIndex) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
-                }
-            }
-        }
-
-        //toDo: Add lecturers in this course
-    }
-
-    studentToRemove?.let { student ->
-        AlertDialogDelete(
-            message = "Are you sure you want to remove the student \"${student.firstName} ${student.lastName}\" from this course?",
-            onDismiss = { studentToRemove = null },
-            onConfirm = {
-                val docRef = db.collection("courses").document(courseId)
-
-                docRef.update(
-                    "studentIds", FieldValue.arrayRemove(student.userId),
-                    "enrolledStudents", FieldValue.increment(-1)
-                ).addOnSuccessListener {
-                    db.collection("chat_rooms").document(courseId)
-                        .update("participants", FieldValue.arrayRemove(student.userId))
-                        .addOnSuccessListener {
-                            Toast.makeText(context, "Student removed from course and chat", Toast.LENGTH_SHORT).show()
-                        }
-                        .addOnFailureListener {
-                            Toast.makeText(context, "Student removed from course list", Toast.LENGTH_SHORT).show()
-                        }
-                }.addOnFailureListener {
-                    Toast.makeText(context, "Failed to remove student", Toast.LENGTH_SHORT).show()
-                }
-            }
-        )
     }
 }
 
@@ -1044,6 +1128,62 @@ private fun StudentCard(
                 }
             }
 
+        }
+    }
+}
+
+
+@Composable
+private fun LecturerCard(
+    lecturer: User
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = FieldBackground
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconCircleBox(
+                icon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = "Lecturer",
+                        tint = PrimaryPurpleDark,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "${lecturer.firstName} ${lecturer.lastName}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = lecturer.email,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextMuted
+                )
+            }
         }
     }
 }
