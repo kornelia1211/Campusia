@@ -61,6 +61,23 @@ import com.example.campusia.ui.theme.TextPrimary
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.type.DayOfWeek
+import android.content.Context
+import android.content.Intent
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.core.content.FileProvider
+import java.io.FileOutputStream
+import java.io.File
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 
 @Composable
 fun ScheduleScreen(
@@ -73,6 +90,11 @@ fun ScheduleScreen(
     var courses by remember {
         mutableStateOf<List<Course>>(emptyList())
     }
+
+    val context = LocalContext.current
+
+    var academicYearStart by remember { mutableStateOf("20261005") }
+
 
     LaunchedEffect(Unit) {
         db.collection("courses")
@@ -98,8 +120,17 @@ fun ScheduleScreen(
                         allCourses
                     }
                 }
+
+                db.collection("academicYearStart").document("current").get()
+                    .addOnSuccessListener { document ->
+                        val dateFromDb = document.getString("date")
+                        if (!dateFromDb.isNullOrBlank()) {
+                            academicYearStart = dateFromDb
+                        }
+                    }
             }
     }
+
 
     val groupedCourses = courses
         .sortedWith(
@@ -146,7 +177,8 @@ fun ScheduleScreen(
             item {
                 ScheduleHeaderCard(
                     courseCount = courses.size,
-                    daysCount = daysWithCourses
+                    daysCount = daysWithCourses,
+                    onExportClick = { exportScheduleAsIcs(context, courses, academicYearStart) }
                 )
             }
 
@@ -186,7 +218,8 @@ fun ScheduleScreen(
 @Composable
 private fun ScheduleHeaderCard(
     courseCount: Int,
-    daysCount: Int
+    daysCount: Int,
+    onExportClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -202,6 +235,19 @@ private fun ScheduleHeaderCard(
             )
             .padding(20.dp)
     ) {
+        IconButton(
+            onClick = onExportClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .background(Color.White.copy(alpha = 0.15f), CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Download,
+                contentDescription = "Add to calendar",
+                tint = Color.White
+            )
+        }
+
         Column {
             Box(
                 modifier = Modifier
@@ -530,4 +576,82 @@ private fun formatEnumName(value: String): String {
         .lowercase()
         .replace('_', ' ')
         .replaceFirstChar { it.uppercase() }
+}
+
+private fun exportScheduleAsIcs(context: Context, courses: List<Course>, startDateStr: String) {
+    if (courses.isEmpty()) return
+
+    val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
+    val inputDate = try {
+        LocalDate.parse(startDateStr, formatter)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Wrong date format in database, using 2026.10.05!", Toast.LENGTH_LONG).show()
+        LocalDate.of(2026, 10, 5)
+    }
+
+    val baseMonday = inputDate.with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+
+    val icsContent = StringBuilder().apply {
+        append("BEGIN:VCALENDAR\n")
+        append("VERSION:2.0\n")
+        append("PRODID:-//Campusia//Timetable//EN\n")
+        append("CALSCALE:GREGORIAN\n")
+
+        courses.forEach { course ->
+            val daysToAdd = when (course.schedule.dayOfWeek) {
+                DayOfWeek.MONDAY    -> 0L
+                DayOfWeek.TUESDAY   -> 1L
+                DayOfWeek.WEDNESDAY -> 2L
+                DayOfWeek.THURSDAY  -> 3L
+                DayOfWeek.FRIDAY    -> 4L
+                DayOfWeek.SATURDAY  -> 5L
+                DayOfWeek.SUNDAY    -> 6L
+                else                -> 0L
+            }
+
+            val dayCode = when (course.schedule.dayOfWeek) {
+                DayOfWeek.MONDAY -> "MO"
+                DayOfWeek.TUESDAY -> "TU"
+                DayOfWeek.WEDNESDAY -> "WE"
+                DayOfWeek.THURSDAY -> "TH"
+                DayOfWeek.FRIDAY -> "FR"
+                DayOfWeek.SATURDAY -> "SA"
+                DayOfWeek.SUNDAY -> "SU"
+                else -> "MO"
+            }
+
+            val calculatedDate = baseMonday.plusDays(daysToAdd).format(formatter)
+
+            val start = course.schedule.startTime.replace(":", "") + "00"
+            val end = course.schedule.endTime.replace(":", "") + "00"
+            val interval = if (course.schedule.frequency == CourseFrequency.EVERY_WEEK) 1 else 2
+
+            append("BEGIN:VEVENT\n")
+            append("SUMMARY:${course.title}\n")
+            append("DESCRIPTION:${course.description}\n")
+            append("LOCATION:Building ${course.schedule.building}, room ${course.schedule.room}\n")
+            append("DTSTART;TZID=Europe/Warsaw:${calculatedDate}T$start\n")
+            append("DTEND;TZID=Europe/Warsaw:${calculatedDate}T$end\n")
+            append("RRULE:FREQ=WEEKLY;INTERVAL=$interval;BYDAY=$dayCode;UNTIL=20270630T235959Z\n")
+            append("END:VEVENT\n")
+        }
+        append("END:VCALENDAR\n")
+    }.toString()
+
+    try {
+        val file = File(context.cacheDir, "campusia_schedule.ics")
+        val output = FileOutputStream(file)
+        output.write(icsContent.toByteArray())
+        output.close()
+
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "text/calendar")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Open calendar via:"))
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+    }
 }

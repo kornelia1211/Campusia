@@ -79,6 +79,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.*
+import com.example.campusia.ui.theme.TextPrimary
 
 private data class HomeUpcomingAssignment(
     val assignment: Assignment,
@@ -585,6 +588,7 @@ fun HomeScreen(
                                         )
                                     }
                                 )
+                                AdminDateRow()
                             }
 
                             UserRole.STUDENT -> Unit
@@ -983,6 +987,88 @@ private fun DialogListItem(
                     color = TextMuted,
                     fontSize = 12.sp
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun AdminDateRow() {
+    val db = FirebaseFirestore.getInstance()
+    val context = LocalContext.current
+
+    var dateInput by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        db.collection("academicYearStart").document("current").get()
+            .addOnSuccessListener { document ->
+                val dateFromDb = document.getString("date")
+                if (!dateFromDb.isNullOrBlank()) {
+                    dateInput = dateFromDb
+                }
+            }
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Change Term Start Date (YYYYMMDD)",
+                color = TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = dateInput,
+                    onValueChange = { dateInput = it },
+                    label = { dateInput },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryPurple,
+                        unfocusedBorderColor = FieldBorder,
+                        focusedLabelColor = PrimaryPurple
+                    )
+                )
+
+                Button(
+                    onClick = {
+                        if (dateInput.length == 8 && dateInput.all { it.isDigit() }) {
+                            db.collection("academicYearStart").document("current")
+                                .set(mapOf("date" to dateInput))
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Saved successfully!", Toast.LENGTH_SHORT).show()
+                                }
+                        } else {
+                            Toast.makeText(context, "Use YYYYMMDD!", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
+                    modifier = Modifier.height(56.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Save,
+                        contentDescription = "Save",
+                        tint = Color.White
+                    )
+                }
             }
         }
     }
