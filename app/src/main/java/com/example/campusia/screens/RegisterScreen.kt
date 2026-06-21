@@ -840,7 +840,7 @@ fun register(
                                 "Successfully registered!",
                                 Toast.LENGTH_SHORT
                             ).show()
-                            navController.navigate("courses_screen"){
+                            navController.navigate("home_screen"){
                                 popUpTo("register_screen") {inclusive = true} //so logged in user cannot go back to registration screen
                             }
                         }
