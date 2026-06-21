@@ -256,10 +256,21 @@ fun ProfileScreen(navController: NavHostController) {
                                     return@PersonalInformationCard
                                 }
 
+                                val trimmedPhoneNumber = phoneNumber.trim()
+
+                                if (trimmedPhoneNumber.isNotBlank() && !trimmedPhoneNumber.all { it.isDigit() }) {
+                                    Toast.makeText(
+                                        context,
+                                        "Phone number can contain only digits.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@PersonalInformationCard
+                                }
+
                                 val updatedUser = hashMapOf(
                                     "firstName" to firstName.trim(),
                                     "lastName" to lastName.trim(),
-                                    "phoneNumber" to phoneNumber.trim(),
+                                    "phoneNumber" to trimmedPhoneNumber,
                                     "address" to address.trim()
                                 )
 
