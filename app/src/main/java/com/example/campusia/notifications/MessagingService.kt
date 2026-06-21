@@ -19,6 +19,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlin.random.Random
 import com.example.campusia.R
+import android.net.Uri
 
 class MessagingService : FirebaseMessagingService() {
 
@@ -102,7 +103,10 @@ class MessagingService : FirebaseMessagingService() {
         }
 
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags =
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
 
             if (targetRoute.isNotBlank()) {
                 putExtra("targetRoute", targetRoute)
@@ -143,12 +147,19 @@ class MessagingService : FirebaseMessagingService() {
     private fun getTargetRoute(
         message: RemoteMessage
     ): String {
+        val routeFromData = message.data["targetRoute"] ?: ""
+
+        if (routeFromData.isNotBlank()) {
+            return routeFromData
+        }
+
         val type = message.data["type"] ?: ""
 
         return when (type) {
             "assignment_deadline",
             "assignment_grade" -> {
                 val assignmentId = message.data["assignmentId"] ?: ""
+
                 if (assignmentId.isNotBlank()) {
                     "assignment_details/$assignmentId"
                 } else {
@@ -158,8 +169,31 @@ class MessagingService : FirebaseMessagingService() {
 
             "course_announcement" -> {
                 val announcementId = message.data["announcementId"] ?: ""
+
                 if (announcementId.isNotBlank()) {
                     "announcement_details_screen/$announcementId"
+                } else {
+                    ""
+                }
+            }
+
+            "chat_message",
+            "new_message",
+            "message" -> {
+                val chatRoomId =
+                    message.data["chatRoomId"]
+                        ?: message.data["roomId"]
+                        ?: message.data["chatId"]
+                        ?: ""
+
+                val chatTitle =
+                    message.data["chatTitle"]
+                        ?: message.data["roomTitle"]
+                        ?: message.data["courseName"]
+                        ?: "Chat"
+
+                if (chatRoomId.isNotBlank()) {
+                    "chat/$chatRoomId/$chatTitle"
                 } else {
                     ""
                 }

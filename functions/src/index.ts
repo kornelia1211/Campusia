@@ -194,16 +194,29 @@ async function sendGradeNotification(
     const invalidTokens: string[] = [];
 
     for (const tokenChunk of tokenChunks) {
+        const notificationTitle = "Assignment graded";
+        const notificationBody = `Your assignment "${assignmentTitle}" was graded: ${gradePercent}%`;
+        const targetRoute = `assignment_details/${assignmentId}`;
+
         const response = await getMessaging().sendEachForMulticast({
             tokens: tokenChunk,
+            notification: {
+                title: notificationTitle,
+                body: notificationBody,
+            },
             data: {
                 type: "assignment_grade",
-                assignmentId,
-                title: "Assignment graded",
-                body: `Your assignment "${assignmentTitle}" was graded: ${gradePercent}%`,
+                assignmentId: String(assignmentId),
+                title: notificationTitle,
+                body: notificationBody,
+                targetRoute: targetRoute,
             },
             android: {
                 priority: "high",
+                notification: {
+                    channelId: "campusia_notifications",
+                    clickAction: "OPEN_MAIN_ACTIVITY",
+                },
             },
         });
 
@@ -292,17 +305,30 @@ async function sendAssignmentReminder(
     const invalidTokens: string[] = [];
 
     for (const tokenChunk of tokenChunks) {
+        const notificationTitle = "Assignment deadline approaching";
+        const notificationBody = `"${title}" is due ${dueDateText}`;
+        const targetRoute = `assignment_details/${assignmentId}`;
+
         const response = await getMessaging().sendEachForMulticast({
             tokens: tokenChunk,
+            notification: {
+                title: notificationTitle,
+                body: notificationBody,
+            },
             data: {
                 type: "assignment_deadline",
-                assignmentId,
-                courseId,
-                title: "Assignment deadline approaching",
-                body: `"${title}" is due ${dueDateText}`,
+                assignmentId: String(assignmentId),
+                courseId: String(courseId),
+                title: notificationTitle,
+                body: notificationBody,
+                targetRoute: targetRoute,
             },
             android: {
                 priority: "high",
+                notification: {
+                    channelId: "campusia_notifications",
+                    clickAction: "OPEN_MAIN_ACTIVITY",
+                },
             },
         });
 
@@ -370,17 +396,30 @@ async function sendAnnouncementNotification(
     const invalidTokens: string[] = [];
 
     for (const tokenChunk of tokenChunks) {
+        const notificationTitle = "New course announcement";
+        const notificationBody = `${announcementTitle}: ${shortMessage}`;
+        const targetRoute = `announcement_details_screen/${announcementId}`;
+
         const response = await getMessaging().sendEachForMulticast({
             tokens: tokenChunk,
+            notification: {
+                title: notificationTitle,
+                body: notificationBody,
+            },
             data: {
                 type: "course_announcement",
-                announcementId,
-                courseId,
-                title: "New course announcement",
-                body: `${announcementTitle}: ${shortMessage}`,
+                announcementId: String(announcementId),
+                courseId: String(courseId),
+                title: notificationTitle,
+                body: notificationBody,
+                targetRoute: targetRoute,
             },
             android: {
                 priority: "high",
+                notification: {
+                    channelId: "campusia_notifications",
+                    clickAction: "OPEN_MAIN_ACTIVITY",
+                },
             },
         });
 

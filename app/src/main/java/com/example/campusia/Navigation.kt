@@ -97,11 +97,16 @@ fun Navigation(auth: FirebaseAuth,
         return
     }
 
-    LaunchedEffect(isCheckingSession, initialRoute) {
-        if (!isCheckingSession && !initialRoute.isNullOrBlank() && startDestination != "login_screen") {
+    LaunchedEffect(isCheckingSession, initialRoute, startDestination) {
+        if (
+            !isCheckingSession &&
+            !initialRoute.isNullOrBlank() &&
+            startDestination != "login_screen"
+        ) {
             navController.navigate(initialRoute) {
                 launchSingleTop = true
             }
+
             onInitialRouteConsumed()
         }
     }
