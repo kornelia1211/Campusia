@@ -573,48 +573,50 @@ fun CourseDetailsScreen(
                 }
             }
 
-            item {
-                SectionCard(
-                    title = "Enrolled Students"
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
+            if (isUserAuthorized) {
+                item {
+                    SectionCard(
+                        title = "Enrolled Students"
                     ) {
-                        IconCircleBox(
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.Groups,
-                                    contentDescription = "Students",
-                                    tint = PrimaryPurpleDark,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconCircleBox(
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Groups,
+                                        contentDescription = "Students",
+                                        tint = PrimaryPurpleDark,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            )
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Text(
+                                text = "Students",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        students.sortedBy { it.lastName }.forEachIndexed { index, student ->
+
+                            StudentCard(
+                                student = student,
+                                role = role,
+                                onDeleteClick = {
+                                    studentToRemove = student
+                                }
+                            )
+
+                            if (index != students.lastIndex) {
+                                Spacer(modifier = Modifier.height(12.dp))
                             }
-                        )
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Text(
-                            text = "Students",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    students.sortedBy { it.lastName }.forEachIndexed { index, student ->
-
-                        StudentCard(
-                            student = student,
-                            role = role,
-                            onDeleteClick = {
-                                studentToRemove = student
-                            }
-                        )
-
-                        if (index != students.lastIndex) {
-                            Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
                 }
