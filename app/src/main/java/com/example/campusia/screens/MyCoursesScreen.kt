@@ -64,6 +64,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
+
 private val ScreenBackground = Color(0xFFF8F7FB)
 val HeaderTextColor = Color(0xFF1F1F29)
 private val SubtitleTextColor = Color(0xFF8A8A98)
@@ -159,10 +160,12 @@ fun MyCoursesScreen(navController: NavHostController) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(ScreenBackground)
-                .padding(paddingValues)
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(16.dp),
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = paddingValues.calculateTopPadding() + 8.dp,
+                    bottom = paddingValues.calculateBottomPadding()
+                ),
         ) {
             Box(
                 modifier = Modifier
@@ -344,6 +347,7 @@ fun MyCoursesScreen(navController: NavHostController) {
                 }
             } else {
                 LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredCourses) { course ->
@@ -369,9 +373,6 @@ fun MyCoursesScreen(navController: NavHostController) {
                         )
                     }
 
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
                 }
             }
         }
