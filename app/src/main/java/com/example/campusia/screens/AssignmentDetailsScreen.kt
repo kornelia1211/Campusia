@@ -559,7 +559,14 @@ fun AssignmentDetailsScreen(
 
                             Spacer(Modifier.height(12.dp))
 
-                            if (studentSubmission?.isLate == true) {
+                            val isStudentSubmissionLate = studentSubmission?.let { submission ->
+                                isSubmissionLate(
+                                    submission = submission,
+                                    assignmentDueDate = assignment?.dueDate
+                                )
+                            } == true
+
+                            if (isStudentSubmissionLate) {
                                 LateBadge(
                                     text = "Your submitted assignment is marked as late."
                                 )
@@ -662,6 +669,7 @@ fun AssignmentDetailsScreen(
 
                                     StudentSubmissionCard(
                                         submission = submission,
+                                        assignmentDueDate = assignment?.dueDate,
                                         onFileClick = { url ->
                                             openFileUrl(
                                                 context = context,
@@ -691,6 +699,29 @@ fun AssignmentDetailsScreen(
     }
 }
 
+private fun isSubmissionLate(
+    submission: AssignmentSubmission,
+    assignmentDueDate: Timestamp?
+): Boolean {
+    if (submission.isLate) {
+        return true
+    }
+
+    val submittedTime = submission.submittedAt
+        ?.toDate()
+        ?.time
+        ?: return false
+
+    val dueTime = submission.dueDate
+        ?.toDate()
+        ?.time
+        ?: assignmentDueDate
+            ?.toDate()
+            ?.time
+        ?: return false
+
+    return submittedTime > dueTime
+}
 @Composable
 private fun LateBadge(
     text: String
@@ -800,6 +831,7 @@ private fun SubmittedFileItem(
 @Composable
 private fun StudentSubmissionCard(
     submission: AssignmentSubmission,
+    assignmentDueDate: Timestamp?,
     onFileClick: (String) -> Unit,
     onGradeSave: (AssignmentSubmission, Int) -> Unit
 ) {
@@ -810,6 +842,18 @@ private fun StudentSubmissionCard(
                 Locale.getDefault()
             ).format(date)
         } ?: "No submission date"
+    }
+
+    val submissionIsLate = remember(
+        submission.isLate,
+        submission.submittedAt,
+        submission.dueDate,
+        assignmentDueDate
+    ) {
+        isSubmissionLate(
+            submission = submission,
+            assignmentDueDate = assignmentDueDate
+        )
     }
 
     Card(
@@ -838,7 +882,7 @@ private fun StudentSubmissionCard(
                 style = MaterialTheme.typography.bodySmall
             )
 
-            if (submission.isLate) {
+            if (submissionIsLate) {
                 Spacer(Modifier.height(12.dp))
 
                 LateBadge(
@@ -1080,6 +1124,12 @@ private fun saveSubmissionToFirestore(
     onSuccess: (Boolean) -> Unit,
     onError: (String) -> Unit
 ) {
+    val submittedAt = Timestamp.now()
+
+    val finalIsLate = dueDate?.toDate()?.time?.let { dueTime ->
+        submittedAt.toDate().time > dueTime
+    } ?: isLate
+
     db.collection("assignments")
         .document(assignmentId)
         .collection("submissions")
@@ -1088,9 +1138,9 @@ private fun saveSubmissionToFirestore(
             mapOf(
                 "studentId" to studentId,
                 "studentEmail" to studentEmail,
-                "submittedAt" to Timestamp.now(),
+                "submittedAt" to submittedAt,
                 "dueDate" to dueDate,
-                "isLate" to isLate,
+                "isLate" to finalIsLate,
                 "files" to FieldValue.arrayUnion(
                     *uploadedFiles.toTypedArray()
                 )
@@ -1103,11 +1153,11 @@ private fun saveSubmissionToFirestore(
                 .update("submittedBy", FieldValue.arrayUnion(studentId))
                 .addOnSuccessListener {
                     onUploadingChange(false)
-                    onSuccess(isLate)
+                    onSuccess(finalIsLate)
                 }
                 .addOnFailureListener { exception ->
                     onUploadingChange(false)
-                    onSuccess(isLate)
+                    onSuccess(finalIsLate)
                 }
         }
         .addOnFailureListener { exception ->
