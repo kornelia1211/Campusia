@@ -86,7 +86,8 @@ import com.example.campusia.ui.theme.TextPrimary
 private data class HomeUpcomingAssignment(
     val assignment: Assignment,
     val courseTitle: String,
-    val dueDateText: String
+    val dueDateText: String,
+    val isLate: Boolean
 )
 
 private data class HomeSubmissionToCheck(
@@ -719,6 +720,32 @@ private fun UpcomingDeadlineCard(
     upcomingAssignment: HomeUpcomingAssignment,
     onClick: () -> Unit
 ) {
+    val now =
+    System.currentTimeMillis()
+
+    val dueMillis =
+        upcomingAssignment
+            .assignment
+            .dueDate
+            ?.toDate()
+            ?.time
+
+    val isLate =
+        dueMillis != null && dueMillis < now
+
+    val deadlineColor =
+        if (isLate) {
+            Color(0xFFDC2626)
+        } else {
+            PrimaryPurpleDark
+        }
+
+    val deadlineLabel =
+        if (isLate) {
+            "Late: ${upcomingAssignment.dueDateText}"
+        } else {
+            "Due: ${upcomingAssignment.dueDateText}"
+        }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -754,7 +781,7 @@ private fun UpcomingDeadlineCard(
                 Icon(
                     imageVector = Icons.Outlined.CalendarMonth,
                     contentDescription = null,
-                    tint = PrimaryPurple,
+                    tint = deadlineColor,
                     modifier = Modifier.size(23.dp)
                 )
             }
@@ -793,8 +820,8 @@ private fun UpcomingDeadlineCard(
                 )
 
                 Text(
-                    text = "Due: ${upcomingAssignment.dueDateText}",
-                    color = PrimaryPurpleDark,
+                    text = deadlineLabel,
+                    color = deadlineColor,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -835,12 +862,19 @@ private fun UpcomingAssignmentsDialog(
                             it.assignment.assignmentId
                         }
                     ) { item ->
+                        val deadlineText =
+                            if (item.isLate) {
+                                "Late: ${item.dueDateText}"
+                            } else {
+                                "Due: ${item.dueDateText}"
+                            }
+
                         DialogListItem(
                             title = item.assignment.title.ifBlank {
                                 "Untitled assignment"
                             },
                             subtitle =
-                                "${item.courseTitle}\nDue: ${item.dueDateText}",
+                                "${item.courseTitle}\n$deadlineText",
                             onClick = {
                                 onAssignmentClick(
                                     item.assignment.assignmentId
@@ -1118,6 +1152,9 @@ private fun loadHomeAssignmentsData(
                 }
 
             if (role == UserRole.STUDENT) {
+                val currentUserId =
+                    FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+
                 val now =
                     System.currentTimeMillis()
 
@@ -1139,15 +1176,33 @@ private fun loadHomeAssignmentsData(
                                     ?.toDate()
                                     ?.time
 
+                            val alreadySubmitted =
+                                currentUserId.isNotBlank() &&
+                                        assignment.submittedBy.contains(currentUserId)
+
                             dueMillis != null &&
-                                    dueMillis >= now &&
+                                    !alreadySubmitted &&
                                     dueMillis <= sevenDaysFromNow
                         }
-                        .sortedBy {
-                            it.dueDate?.toDate()?.time
-                                ?: Long.MAX_VALUE
-                        }
+                        .sortedWith(
+                            compareBy<Assignment> {
+                                val dueMillis =
+                                    it.dueDate?.toDate()?.time
+                                        ?: Long.MAX_VALUE
+
+                                dueMillis >= now
+                            }.thenBy {
+                                it.dueDate?.toDate()?.time
+                                    ?: Long.MAX_VALUE
+                            }
+                        )
                         .map { assignment ->
+                            val dueMillis =
+                                assignment
+                                    .dueDate
+                                    ?.toDate()
+                                    ?.time
+
                             HomeUpcomingAssignment(
                                 assignment = assignment,
                                 courseTitle =
@@ -1160,7 +1215,9 @@ private fun loadHomeAssignmentsData(
                                         ?.let {
                                             dateFormatter.format(it)
                                         }
-                                        ?: "No due date"
+                                        ?: "No due date",
+                                isLate =
+                                    dueMillis != null && dueMillis < now
                             )
                         }
 
