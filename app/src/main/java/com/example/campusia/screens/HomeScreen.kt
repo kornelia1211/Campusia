@@ -489,7 +489,13 @@ fun HomeScreen(
                                     icon = Icons.Filled.MenuBook
                                 )
                                 MetricCard(
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            navController.navigate("admin_students") {
+                                                launchSingleTop = true
+                                            }
+                                        },
                                     label = "Total Students",
                                     value = "$totalStudents",
                                     icon = Icons.Default.People
@@ -501,7 +507,13 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 MetricCard(
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            navController.navigate("admin_lecturers") {
+                                                launchSingleTop = true
+                                            }
+                                        },
                                     label = "Active Lecturers",
                                     value = "$totalLecturers",
                                     icon = Icons.Default.SupervisorAccount

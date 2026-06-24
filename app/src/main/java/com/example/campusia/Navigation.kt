@@ -38,6 +38,9 @@ import com.example.campusia.ui.theme.PrimaryPurple
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.campusia.screens.NotificationHistoryScreen
+import com.example.campusia.screens.AdminStudentsListScreen
+import com.example.campusia.screens.AdminLecturersListScreen
+
 
 @Composable
 fun Navigation(auth: FirebaseAuth,
@@ -301,6 +304,18 @@ fun Navigation(auth: FirebaseAuth,
 
         composable("notifications_screen") {
             NotificationHistoryScreen(navController = navController)
+        }
+
+        composable("admin_students") {
+            AdminStudentsListScreen(
+                navController = navController
+            )
+        }
+
+        composable("admin_lecturers") {
+            AdminLecturersListScreen(
+                navController = navController
+            )
         }
     }
 }
