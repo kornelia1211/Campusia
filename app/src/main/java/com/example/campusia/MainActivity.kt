@@ -14,6 +14,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 
 class MainActivity : ComponentActivity() {
+
     private lateinit var auth: FirebaseAuth
 
     private var pendingRoute by mutableStateOf<String?>(null)
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+
         setIntent(intent)
         pendingRoute = extractTargetRoute(intent)
     }

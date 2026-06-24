@@ -104,9 +104,10 @@ class MessagingService : FirebaseMessagingService() {
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags =
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
                         Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+            action = "OPEN_NOTIFICATION_${System.currentTimeMillis()}"
 
             if (targetRoute.isNotBlank()) {
                 putExtra("targetRoute", targetRoute)
@@ -193,7 +194,8 @@ class MessagingService : FirebaseMessagingService() {
                         ?: "Chat"
 
                 if (chatRoomId.isNotBlank()) {
-                    "chat/$chatRoomId/$chatTitle"
+                    val encodedChatTitle = Uri.encode(chatTitle)
+                    "chat/$chatRoomId/$encodedChatTitle"
                 } else {
                     ""
                 }
