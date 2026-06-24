@@ -125,23 +125,25 @@ fun BottomNavBar(
                     }
                 )
 
-                BottomNavItem(
-                    modifier = Modifier.weight(1f),
-                    label = "Alerts",
-                    selected = selectedItem == "notifications",
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Notifications,
-                            contentDescription = "Notifications",
-                            modifier = Modifier.size(22.dp)
-                        )
-                    },
-                    onClick = {
-                        navController.navigate("notifications_screen") {
-                            launchSingleTop = true
+                if (SessionManager.userRole == UserRole.STUDENT){
+                    BottomNavItem(
+                        modifier = Modifier.weight(1f),
+                        label = "Alerts",
+                        selected = selectedItem == "notifications",
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Notifications,
+                                contentDescription = "Notifications",
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        onClick = {
+                            navController.navigate("notifications_screen") {
+                                launchSingleTop = true
+                            }
                         }
-                    }
-                )
+                    )
+                }
 
                 if (SessionManager.userRole != UserRole.ADMIN) {
                     BottomNavItem(
