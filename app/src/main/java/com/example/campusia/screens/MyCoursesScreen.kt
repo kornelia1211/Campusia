@@ -266,26 +266,28 @@ fun MyCoursesScreen(navController: NavHostController) {
                 )
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (role == UserRole.STUDENT){
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (showOnlyEnrolled) AccentPurple.copy(alpha = 0.15f) else Color.Transparent)
-                    .border(
-                        width = 1.dp,
-                        color = if (showOnlyEnrolled) AccentPurple else SearchBorder,
-                        shape = RoundedCornerShape(12.dp)
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (showOnlyEnrolled) AccentPurple.copy(alpha = 0.15f) else Color.Transparent)
+                        .border(
+                            width = 1.dp,
+                            color = if (showOnlyEnrolled) AccentPurple else SearchBorder,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .clickable { showOnlyEnrolled = !showOnlyEnrolled }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Enrolled Only",
+                        color = if (showOnlyEnrolled) AccentPurpleDark else HeaderTextColor,
+                        fontWeight = if (showOnlyEnrolled) FontWeight.Bold else FontWeight.Medium
                     )
-                    .clickable { showOnlyEnrolled = !showOnlyEnrolled }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Enrolled Only",
-                    color = if (showOnlyEnrolled) AccentPurpleDark else HeaderTextColor,
-                    fontWeight = if (showOnlyEnrolled) FontWeight.Bold else FontWeight.Medium
-                )
+                }
             }
 
             Spacer(modifier = Modifier.height(18.dp))
